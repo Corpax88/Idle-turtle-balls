@@ -16,7 +16,7 @@ const balls = [
   { x: 280, y: 420, vx: -1.8, vy: 2.2, r: 18 }
 ];
 
-let money = 0;
+let money = Number(localStorage.getItem("money")) || 0;
 
 function drawBackground() {
   ctx.fillStyle = "#102033";
