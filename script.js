@@ -1,5 +1,4 @@
-console.log("Idle Turtle Balls startet! 🐢⚙️");
+const canvas = document.getElementById("gameCanvas");
 
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("Spillet er klart!");
-});
+console.log("Idle Turtle Balls");
+console.log(canvas);
