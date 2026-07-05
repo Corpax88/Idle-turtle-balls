@@ -79,6 +79,7 @@ function updateBalls() {
  if (distance < ball.r + turtle.radius) {
   ball.vx *= -1;
   ball.vy *= -1;
+  turtleHitTimer = 12;
   money += 1;
   localStorage.setItem("money", money);
     }
