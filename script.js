@@ -64,11 +64,17 @@ function updateBalls() {
     const dy = ball.y - turtle.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < ball.r + turtle.radius) {
-      ball.vx *= -1;
-      ball.vy *= -1;
-      money += 1;
-localStorage.setItem("money", money);
+if (ball.hitCooldown > 0) {
+  ball.hitCooldown--;
+}
+
+if (distance < ball.r + turtle.radius && ball.hitCooldown === 0) {
+  ball.vx *= -1;
+  ball.vy *= -1;
+  money += 1;
+  localStorage.setItem("money", money);
+  ball.hitCooldown = 30;
+}
     }
   }
 }
