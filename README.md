@@ -1,6 +1,6 @@
 # Idle Turtle Balls
 
-Et idle/action-spill laget av Mats + ChatGPT.
+Et idle/action-spill laget av Mats + ChatGPT
 
 ## Hovedidé
 Baller treffer en steampunk-skilpadde for å tjene penger.  
