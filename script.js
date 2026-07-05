@@ -106,6 +106,7 @@ function gameLoop() {
   drawBalls();
   drawUI();
 
+if (turtleHitTimer > 0) turtleHitTimer--;
   requestAnimationFrame(gameLoop);
 }
 
