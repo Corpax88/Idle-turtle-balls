@@ -11,7 +11,7 @@ const turtle = {
 };
 
 const balls = [
-  { x: 120, y: 430, vx: 2.1, vy: -2.4, r: 18 },
+  { x: 120, y: 430, vx: 2.1, vy: -2.4, r: 18, hitCooldown: 0 },
   { x: 210, y: 500, vx: -2.5, vy: -1.8, r: 18 },
   { x: 280, y: 420, vx: -1.8, vy: 2.2, r: 18 }
 ];
