@@ -42,7 +42,9 @@ function drawTurtle() {
   ctx.font = "30px Arial";
   ctx.textAlign = "center";
   ctx.fillStyle = "white";
-  ctx.fillText("🐢", turtle.x, turtle.y + 10);
+const turtleFace = turtleHitTimer > 0 ? "😵" : "🐢";
+ctx.fillStyle = "white";
+ctx.fillText(turtleFace, turtle.x, turtle.y + 10);
 }
 
 function drawBalls() {
