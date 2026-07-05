@@ -17,6 +17,7 @@ const balls = [
 ];
 
 let money = Number(localStorage.getItem("money")) || 0;
+let turtleHitTimer = 0;
 
 function drawBackground() {
   ctx.fillStyle = "#102033";
