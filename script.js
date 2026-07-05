@@ -69,7 +69,6 @@ function updateBalls() {
   ball.vy *= -1;
   money += 1;
   localStorage.setItem("money", money);
-}
     }
   }
 }
