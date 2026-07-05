@@ -30,9 +30,18 @@ function drawBackground() {
 }
 
 function drawTurtle() {
-  ctx.font = "58px Arial";
+  ctx.beginPath();
+  ctx.arc(turtle.x, turtle.y, turtle.radius, 0, Math.PI * 2);
+  ctx.fillStyle = "#4caf50";
+  ctx.fill();
+  ctx.strokeStyle = "#b8ffb8";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.font = "30px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("🐢", turtle.x, turtle.y);
+  ctx.fillStyle = "white";
+  ctx.fillText("🐢", turtle.x, turtle.y + 10);
 }
 
 function drawBalls() {
