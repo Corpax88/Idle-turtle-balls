@@ -1,4 +1,4 @@
-# Idle Turtle Balls v0.29.1
+# Idle Turtle Balls v0.30.0 Boss Arena
 
 Et lite idle/clicker-spill bygget som en statisk nettside.
 
