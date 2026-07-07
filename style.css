@@ -8,6 +8,10 @@ button.purchase{padding-bottom:13px}
 button.buyPulse{animation:buyPulse .22s ease-out}
 @keyframes buyPulse{0%{transform:scale(1)}45%{transform:scale(.96);filter:brightness(1.45)}100%{transform:scale(1)}}
 button.levelBoom .battery{box-shadow:0 0 18px #facc15,inset 0 1px 2px rgba(0,0,0,.65)}
+button.batteryFull{animation:batteryFull .58s ease-out}
+button.batteryFull .battery{box-shadow:0 0 22px #facc15,0 0 34px rgba(34,211,238,.68),inset 0 1px 2px rgba(0,0,0,.65)}
+button.batteryFull .batteryFill{box-shadow:0 0 18px rgba(250,204,21,.95)}
+@keyframes batteryFull{0%{transform:scale(1)}30%{transform:scale(1.06);filter:brightness(1.75)}68%{transform:scale(.985)}100%{transform:scale(1)}}
 button.canBuy{filter:brightness(1.08);}
 button.canBuy .battery{box-shadow:0 0 10px rgba(250,204,21,.45),inset 0 1px 2px rgba(0,0,0,.65)}
 button.holding{transform:translateY(1px) scale(.985);filter:brightness(1.18)}
