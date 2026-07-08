@@ -29,5 +29,14 @@ button.panelActive{filter:brightness(1.25);box-shadow:inset 0 2px 0 rgba(255,229
 .scoreRow b{font-size:13px;color:#fff3d0}
 .scoreRow span{font-size:11px;color:#bae6fd;font-weight:800;text-align:right}
 .scoreEmpty{padding:18px 10px;border:1px dashed rgba(148,163,184,.55);border-radius:8px;color:#cbd5e1;text-align:center;font-size:12px;font-weight:800}
+.weaponTree{display:grid;gap:8px;margin:10px 0 14px}
+.weaponRow{display:grid;grid-template-columns:82px repeat(5,1fr);gap:5px;align-items:center}
+.weaponName{font-size:10px;font-weight:900;color:#fecdd3;text-shadow:0 1px 0 #000}
+.weaponTier{min-height:40px;background:linear-gradient(180deg,#3b0b10,#140407);border-color:#ef4444;color:#fee2e2;box-shadow:inset 0 2px 0 rgba(248,113,113,.35),inset 0 -4px 0 rgba(69,10,10,.45),0 4px 0 #160407,0 0 0 1px rgba(0,0,0,.35)}
+.weaponTier:before{content:''}
+.weaponTier:after{background:#ef4444;box-shadow:-8px 0 #7f1d1d}
+.weaponTier.owned{background:linear-gradient(180deg,#ef4444,#7f1d1d);border-color:#fecaca;box-shadow:inset 0 2px 0 rgba(254,202,202,.5),inset 0 -4px 0 rgba(69,10,10,.45),0 4px 0 #160407,0 0 16px rgba(239,68,68,.45)}
+.weaponTier.active{filter:brightness(1.28);box-shadow:inset 0 2px 0 rgba(254,202,202,.6),inset 0 -4px 0 rgba(69,10,10,.3),0 4px 0 #160407,0 0 24px rgba(248,113,113,.72)}
+.weaponTier.locked{opacity:.34;filter:grayscale(.45)}
 @keyframes panelPop{0%{transform:scale(.90);opacity:.4}100%{transform:scale(1);opacity:1}}
 @keyframes shadeIn{0%{opacity:0}100%{opacity:1}}
