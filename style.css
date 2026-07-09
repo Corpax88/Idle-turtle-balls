@@ -46,3 +46,35 @@ button.panelActive{filter:brightness(1.25);box-shadow:inset 0 2px 0 rgba(255,229
 .weaponRespec{min-height:38px;background:linear-gradient(180deg,#7e22ce,#3b0764);border-color:#e9d5ff;color:#f5d0fe;box-shadow:inset 0 2px 0 rgba(233,213,255,.4),inset 0 -4px 0 rgba(59,7,100,.45),0 4px 0 #1f0b3d,0 0 0 1px rgba(0,0,0,.35)}
 .weaponRespec:before{content:''}
 .weaponRespec:after{background:#c084fc;box-shadow:-8px 0 #7e22ce}.shop.battleMode{grid-template-columns:1fr;padding:3px 5px}.shop.battleMode button:not(#openDev){display:none}.shop.battleMode #openDev{display:block;min-height:38px}
+
+.top{padding:6px 8px;background:linear-gradient(180deg,#1a1a18,#050709 62%,#030508);border-bottom:2px solid #4b371d;box-shadow:inset 0 1px 0 rgba(255,232,163,.14),0 3px 10px rgba(0,0,0,.45);position:relative;z-index:2}
+.hudBar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.82fr) auto minmax(0,1fr);gap:6px;align-items:center;max-width:980px;margin:0 auto}
+.hudChip,.hudLevel{min-width:0;border:1.5px solid #5d4a2a;border-radius:7px;background:linear-gradient(180deg,rgba(29,31,29,.96),rgba(6,9,12,.98));box-shadow:inset 0 1px 0 rgba(255,232,163,.15),inset 0 -3px 0 rgba(0,0,0,.34),0 2px 0 #0a0704;color:#fff7ed}
+.hudChip{min-height:46px;display:grid;grid-template-columns:34px minmax(0,1fr);gap:7px;align-items:center;padding:5px 8px;text-transform:uppercase}
+.hudChip i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:18px;font-weight:1000;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.45);box-shadow:inset 0 2px 0 rgba(255,255,255,.34),inset 0 -4px 0 rgba(0,0,0,.28),0 2px 4px rgba(0,0,0,.45)}
+.hudChip b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;line-height:1;font-weight:1000;letter-spacing:.2px}
+.hudChip span{display:block;margin-top:3px;color:#cbd5e1;font-size:9px;font-weight:900;letter-spacing:.7px;line-height:1}
+.hudChip.gold i{background:radial-gradient(circle at 35% 25%,#fff6bf,#facc15 46%,#b45309 78%);color:#4a2500}
+.hudChip.gold b{color:#fff7ed}
+.hudChip.heart i{background:radial-gradient(circle at 35% 25%,#f5d0fe,#a855f7 55%,#581c87 84%);color:#ffe4ff}
+.hudChip.heart b{color:#e9d5ff}
+.hudChip.pp i{border-radius:9px;background:linear-gradient(135deg,#581c87,#9333ea 52%,#c084fc);font-size:12px;color:#f5d0fe}
+.hudChip.pp b{color:#d8b4fe}
+.hudLevel{min-height:52px;padding:8px 18px;display:grid;place-items:center;background:linear-gradient(180deg,#6a4a23,#231608 74%,#100904);border-color:#d9a441;font-size:24px;font-weight:1000;letter-spacing:.3px;text-shadow:0 3px 0 rgba(0,0,0,.72);box-shadow:inset 0 2px 0 rgba(255,229,162,.32),inset 0 -5px 0 rgba(0,0,0,.35),0 3px 0 #1f140c,0 0 18px rgba(217,164,65,.18)}
+.shop{padding:6px 7px 7px;gap:6px;background:linear-gradient(180deg,#07111f,#03070d);border-top:2px solid #4b371d;box-shadow:0 -4px 12px rgba(0,0,0,.35);grid-template-columns:repeat(4,minmax(0,1fr))}
+.shop>button{min-height:46px;border-radius:7px;padding:5px 5px 6px;background:linear-gradient(180deg,#23272a,#090b0f 62%,#050507);border-color:#6b5430;color:#fff7ed;box-shadow:inset 0 1px 0 rgba(255,232,163,.16),inset 0 -4px 0 rgba(0,0,0,.42),0 3px 0 #060403,0 0 0 1px rgba(0,0,0,.35);font-size:10px;letter-spacing:.2px}
+.shop>button:nth-child(-n+4){min-height:62px;padding-top:14px;padding-bottom:13px}
+.shop>button .small{font-size:11px;color:#fef3c7;font-weight:1000;display:block;margin-top:4px}
+.shop .prestige{background:linear-gradient(180deg,#0f6c9a,#07364f 66%,#041a26);border-color:#7dd3fc}
+.shop .shopbtn{background:linear-gradient(180deg,#125f58,#082f2c 68%,#041816);border-color:#5eead4}
+.shop .bossbtn{background:linear-gradient(180deg,#7e22ce,#35115d 68%,#1b0b31);border-color:#d8b4fe}
+.levelTag{left:7px;right:7px;top:4px;text-align:center;font-size:8px;color:#fff0b8;letter-spacing:.3px}
+.battery{left:8px;right:8px;bottom:5px;height:7px;border-color:rgba(255,226,151,.78)}
+.batteryFill{background:linear-gradient(90deg,#22c55e 0%,#facc15 58%,#ef4444 100%)}
+button:before{left:5px;top:5px;opacity:.16}
+button:after{right:6px;bottom:5px;opacity:.45}
+.shop.battleMode{grid-template-columns:1fr;padding:3px 5px}.shop.battleMode button:not(#openDev){display:none}.shop.battleMode #openDev{display:block;min-height:38px}
+@media (max-width:480px){.top{padding:5px 5px}.hudBar{gap:4px;grid-template-columns:minmax(0,1fr) minmax(0,.72fr) auto minmax(0,1fr)}.hudChip{grid-template-columns:28px minmax(0,1fr);gap:5px;min-height:42px;padding:4px 5px}.hudChip i{width:27px;height:27px;font-size:15px}.hudChip.pp i{font-size:10px}.hudChip b{font-size:15px}.hudChip span{font-size:7.5px}.hudLevel{min-height:46px;padding:7px 10px;font-size:19px}.shop{gap:5px;padding:5px}.shop>button{min-height:42px;font-size:9px}.shop>button:nth-child(-n+4){min-height:58px}.shop>button .small{font-size:9px}.levelTag{font-size:7px}}
+
+html,body,#game,#area,canvas,button{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button,input,textarea,select{font:inherit}
