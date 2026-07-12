@@ -757,12 +757,12 @@ function drawHeroSprite(){
 }
 
 const startMenuSettingsKey='idleTurtleBalls_menu_v01';
-let startMenuOpen=true,startMenuSettings={sound:true,reducedFx:false};
+let startMenuOpen=true,gameSettingsOpen=false,startMenuSettings={sound:true,reducedFx:false};
 try{startMenuSettings=Object.assign(startMenuSettings,JSON.parse(localStorage.getItem(startMenuSettingsKey)||'{}'))}catch(e){}
 const liveGameUpdate=update,liveTowerStinger=playTowerStinger,liveSpawnJuice=spawnJuice;
 
 update=function(dt){
-  if(startMenuOpen)return;
+  if(startMenuOpen||gameSettingsOpen)return;
   liveGameUpdate(dt);
   if(startMenuSettings.reducedFx){
     shake=Math.min(shake,5);
@@ -821,7 +821,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.60.2 MENU POLISH</div>'+
+    '<div class="startVersion">v0.62.0 UPGRADE HUB</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -873,6 +873,76 @@ function setupStartMenu(){
   screen.querySelector('#startPlay').focus({preventScroll:true});
 }
 
+function renderGameSettings(){
+  if(!els.gameSettingsPanel)return;
+  let sound=els.gameSettingsPanel.querySelector('#gameSoundOption'),side=els.gameSettingsPanel.querySelector('#gameSideOption'),
+      effects=els.gameSettingsPanel.querySelector('#gameFxOption');
+  sound.querySelector('em').textContent=startMenuSettings.sound?'ON':'OFF';
+  side.querySelector('em').textContent=heroOnRight()?'RIGHT':'LEFT';
+  effects.querySelector('em').textContent=startMenuSettings.reducedFx?'REDUCED':'FULL';
+}
+
+function setupInGameSettings(){
+  if(document.getElementById('openSettings'))return;
+  let panel=document.createElement('div');
+  panel.id='gameSettingsPanel';
+  panel.className='panel gameSettingsPanel';
+  panel.innerHTML='<h2>Settings</h2><div class="startOptions gameSettingsOptions"><button id="gameSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="gameSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="gameFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button><button id="gameFullscreenOption" class="startOption"><span>\u26f6</span><b>Fullscreen</b><em>OPEN</em></button></div>';
+  els.area.appendChild(panel);
+  els.gameSettingsPanel=panel;
+  let button=document.createElement('button');
+  button.id='openSettings';
+  button.className='hudSettings';
+  button.title='Settings';
+  button.setAttribute('aria-label','Settings');
+  button.innerHTML='\u2699';
+  els.openSettings=button;
+  document.querySelector('.hudBar').appendChild(button);
+  bind(button,()=>{
+    if(panel.classList.contains('show')){closePanels();return}
+    closePanels();
+    panel.classList.add('show');
+    button.classList.add('panelActive');
+    els.modalShade.classList.add('show');
+    gameSettingsOpen=true;
+    renderGameSettings();
+  });
+  panel.querySelector('#gameSoundOption').addEventListener('click',()=>{
+    startMenuSettings.sound=!startMenuSettings.sound;
+    saveStartMenuSettings();
+    renderGameSettings();
+    if(startMenuSettings.sound)playStartMenuChime();
+  });
+  panel.querySelector('#gameSideOption').addEventListener('click',()=>{
+    s.heroSide=heroOnRight()?'left':'right';
+    setBoss();
+    saveGame();
+    renderGameSettings();
+  });
+  panel.querySelector('#gameFxOption').addEventListener('click',()=>{
+    startMenuSettings.reducedFx=!startMenuSettings.reducedFx;
+    saveStartMenuSettings();
+    renderGameSettings();
+  });
+  let fullscreen=panel.querySelector('#gameFullscreenOption');
+  if(!document.documentElement.requestFullscreen)fullscreen.disabled=true;
+  fullscreen.addEventListener('click',async()=>{
+    try{
+      if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+      else if(document.exitFullscreen)await document.exitFullscreen();
+    }catch(e){}
+  });
+  renderGameSettings();
+}
+
+function closePanels(){
+  [els.prestigePanel,els.devPanel,els.scorePanel,els.statsPanel,els.mergePanel,els.gameSettingsPanel].forEach(panel=>{if(panel)panel.classList.remove('show')});
+  els.modalShade.classList.remove('show');
+  [els.openShop,els.openDev,els.openScores,els.openStats,els.openSettings].forEach(button=>{if(button)button.classList.remove('panelActive')});
+  gameSettingsOpen=false;
+}
+
 setupFeedbackUI();
+setupInGameSettings();
 setupStartMenu();
 })();
