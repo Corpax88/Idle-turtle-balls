@@ -617,5 +617,65 @@ function update(){
   if(pop>0)pop*=.85;
 }
 
+function batteryOvercharge(btn,keyName){
+  if(btn){
+    btn.classList.remove('batteryFull');
+    void btn.offsetWidth;
+    btn.classList.add('batteryFull');
+    setTimeout(()=>btn.classList.remove('batteryFull'),620);
+  }
+  if(s.mode!=='turtle')return;
+  machineGlow=120;
+  shake=Math.max(shake,10);
+  pop=Math.max(pop,7);
+  let lvl=s[keyName]||0,dmg=(turtle.max||60)*(.035+Math.min(50,lvl)*.001);
+  turtle.hp-=dmg;
+  earn(dmg,turtle.x,turtle.y,null);
+  if(turtle.hp<=0)startTurtleDeath();
+}
+
+function moneyBurst(x,y){
+  if((boss.defeat||0)>0)return;
+  for(let i=0;i<26;i++){
+    let a=Math.random()*Math.PI*2,sp=1.6+Math.random()*4.2;
+    moneyConfetti.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2.2,life:34+Math.random()*26,max:60,r:2+Math.random()*3,rot:Math.random()*6,spin:(Math.random()-.5)*.35,c:['#facc15','#fde68a','#22c55e','#f97316'][i%4],coin:i%3===0});
+  }
+}
+
+function drawBossAsset(index,bd,hpPct,panic,rage,hit,defeat,tm,size){
+  index=Math.max(0,Math.min(9,index||0));
+  let img=bossAnimatedImages[index];
+  if(!imgReady(img))return drawBossStaticAsset(index,bd,hpPct,panic,rage,hit,defeat,tm,size);
+  size=size||1;
+  let state=0,local=0;
+  if(defeat>0){state=12;local=Math.min(3,Math.floor((1-defeat/132)*4))}
+  else if(hit){state=8;local=Math.min(3,Math.floor((1-Math.min(30,boss.hurt)/30)*4))}
+  else if((boss.attackAnim||0)>0){state=4;local=Math.min(3,Math.floor((1-boss.attackAnim/30)*4))}
+  else local=Math.floor(performance.now()/1000*2.4+index)%4;
+  let frame=state+local,drawSize=184*size,facing=heroOnRight()?1:-1;
+  ctx.save();
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+  ctx.scale(facing,1);
+  ctx.drawImage(img,frame*384+3,3,378,378,-drawSize*.5,-drawSize*.62,drawSize,drawSize);
+  if(hit){
+    ctx.globalCompositeOperation='screen';
+    ctx.globalAlpha=.12;
+    ctx.drawImage(img,frame*384+3,3,378,378,-drawSize*.5,-drawSize*.62,drawSize,drawSize);
+  }
+  ctx.restore();
+  drawBossHealthBar(hpPct,size);
+  if(boss.taunt>0&&!rage&&!hit&&!defeat){
+    ctx.fillStyle='#fb7185';
+    ctx.font='900 '+Math.floor(16*size)+'px system-ui';
+    ctx.textAlign='center';
+    ctx.lineWidth=4*size;
+    ctx.strokeStyle='rgba(0,0,0,.75)';
+    ctx.strokeText(bd.name,0,-94*size);
+    ctx.fillText(bd.name,0,-94*size);
+  }
+  return true;
+}
+
 setupFeedbackUI();
 })();
