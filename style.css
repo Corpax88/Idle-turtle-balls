@@ -122,3 +122,31 @@ button,input,textarea,select{font:inherit}
   .costIcon{width:11px;height:11px;font-size:8px}
   .mergeIcon{width:29px;flex-basis:29px;font-size:9px}
 }
+
+/* The gameplay viewport is always 2:3. Wide screens become atmosphere, not advantage. */
+#area{display:grid;place-items:center;background:#05090e;isolation:isolate}
+#area:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.42;background:radial-gradient(circle at 12% 28%,rgba(217,164,65,.14) 0 3px,transparent 4px 28px,rgba(217,164,65,.08) 29px 31px,transparent 32px),radial-gradient(circle at 88% 68%,rgba(34,211,238,.10) 0 4px,transparent 5px 38px,rgba(217,164,65,.07) 39px 42px,transparent 43px),repeating-linear-gradient(90deg,transparent 0 78px,rgba(217,164,65,.055) 79px 80px)}
+canvas{position:relative;z-index:1;max-width:100%;max-height:100%;background:var(--area-bg,radial-gradient(circle at 50% 40%,#1f3b4d,#0f172a 72%));box-shadow:0 0 0 1px rgba(217,164,65,.22),0 0 38px rgba(0,0,0,.72)}
+@media (max-aspect-ratio:2/3){#area:before{opacity:.16}canvas{box-shadow:none}}
+
+.mergeConfirm{position:absolute;left:50%;top:50%;width:min(330px,calc(100% - 28px));transform:translate(-50%,-50%) scale(.92);z-index:7;display:none;padding:16px 16px 14px;border:2px solid #d9a441;border-radius:8px;background:linear-gradient(180deg,rgba(25,28,29,.98),rgba(5,8,12,.99));box-shadow:inset 0 1px 0 rgba(255,232,163,.22),inset 0 -5px 0 rgba(0,0,0,.42),0 14px 42px rgba(0,0,0,.72);opacity:0}
+.mergeConfirm.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1);animation:mergeConfirmIn .18s ease-out}
+.mergeEmblem{height:44px;display:flex;align-items:center;justify-content:center;gap:9px;color:#f8fafc;font-size:26px;filter:drop-shadow(0 0 8px rgba(45,212,191,.5))}
+.mergeEmblem i{font-style:normal;font-size:16px;color:#5eead4}
+.mergeCompare{display:grid;grid-template-columns:1fr 34px 1fr;align-items:center;margin:6px 0 10px;padding:10px 0;border-top:1px solid rgba(217,164,65,.26);border-bottom:1px solid rgba(217,164,65,.26)}
+.mergeSide{display:grid;grid-template-columns:1fr 1fr;align-items:baseline;gap:2px 6px;text-align:center}
+.mergeSide b{font-size:28px;line-height:1;color:#fff7ed}
+.mergeSide span,.mergeSide small{font-size:8px;font-weight:1000;text-transform:uppercase;color:#94a3b8}
+.mergeSide strong{font-size:15px;color:#fde68a}
+.mergeSide.result b,.mergeSide.result strong{color:#5eead4}
+.mergeArrow{font-size:36px;line-height:1;text-align:center;color:#d9a441;animation:mergeArrowPulse 1s ease-in-out infinite}
+.mergeLock{text-align:center;margin:5px 0 12px;color:#fca5a5;font-size:9px;font-weight:1000;letter-spacing:.7px}
+.mergeActions{display:grid;grid-template-columns:1fr 1.25fr;gap:8px}
+.mergeActions button{min-height:44px}
+.mergeActions button:before{content:none}
+.cancelMerge{background:linear-gradient(180deg,#374151,#111827);border-color:#94a3b8;color:#e2e8f0}
+.weaponRespec{display:flex;align-items:center;justify-content:center;gap:8px;text-transform:uppercase;letter-spacing:.4px}
+.weaponRespec span{font-size:18px;line-height:1}
+.weaponRespec b{color:#f5d0fe}
+@keyframes mergeConfirmIn{from{opacity:0;transform:translate(-50%,-50%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes mergeArrowPulse{0%,100%{transform:translateX(-2px);opacity:.65}50%{transform:translateX(3px);opacity:1}}
