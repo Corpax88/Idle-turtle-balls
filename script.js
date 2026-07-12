@@ -650,6 +650,18 @@ function bossSpriteFacing(index){
   return desiredFacing/nativeFacing;
 }
 
+function setBoss(){
+  boss.x=W*(heroOnRight()?.32:.68);
+  boss.y=H*.45;
+  player.x=W*(heroOnRight()?.82:.18);
+  player.y=player.y||H*.62;
+  player.targetY=player.targetY||player.y;
+  player.targetX=player.x;
+  let bd=currentBoss(),bi=bossLevel();
+  boss.max=Math.floor(18000*bd.hp*Math.pow(1.22,bi));
+  if(!boss.hp||boss.hp>boss.max)boss.hp=boss.max;
+}
+
 function drawBossAsset(index,bd,hpPct,panic,rage,hit,defeat,tm,size){
   index=Math.max(0,Math.min(9,index||0));
   size=(size||1)*BOSS_FIGHT_CHARACTER_SCALE;
@@ -744,5 +756,123 @@ function drawHeroSprite(){
   return true;
 }
 
+const startMenuSettingsKey='idleTurtleBalls_menu_v01';
+let startMenuOpen=true,startMenuSettings={sound:true,reducedFx:false};
+try{startMenuSettings=Object.assign(startMenuSettings,JSON.parse(localStorage.getItem(startMenuSettingsKey)||'{}'))}catch(e){}
+const liveGameUpdate=update,liveTowerStinger=playTowerStinger,liveSpawnJuice=spawnJuice;
+
+update=function(dt){
+  if(startMenuOpen)return;
+  liveGameUpdate(dt);
+  if(startMenuSettings.reducedFx){
+    shake=Math.min(shake,5);
+    pop=Math.min(pop,4);
+  }
+};
+
+playTowerStinger=function(){
+  if(startMenuSettings.sound)liveTowerStinger();
+};
+
+spawnJuice=function(x,y,kind,scale,color){
+  liveSpawnJuice(x,y,kind,(scale||1)*(startMenuSettings.reducedFx?.52:1),color);
+};
+
+function saveStartMenuSettings(){
+  try{localStorage.setItem(startMenuSettingsKey,JSON.stringify(startMenuSettings))}catch(e){}
+  document.body.classList.toggle('reducedFx',!!startMenuSettings.reducedFx);
+}
+
+function playStartMenuChime(){
+  if(!startMenuSettings.sound)return;
+  try{
+    let AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    if(!audioCtx)audioCtx=new AC();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    let now=audioCtx.currentTime,gain=audioCtx.createGain();
+    gain.gain.setValueAtTime(.0001,now);
+    gain.gain.exponentialRampToValueAtTime(.045,now+.025);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+.72);
+    gain.connect(audioCtx.destination);
+    [146.83,220,293.66].forEach((frequency,index)=>{
+      let oscillator=audioCtx.createOscillator();
+      oscillator.type=index===0?'triangle':'sine';
+      oscillator.frequency.setValueAtTime(frequency,now+index*.07);
+      oscillator.connect(gain);
+      oscillator.start(now+index*.07);
+      oscillator.stop(now+.74);
+    });
+  }catch(e){}
+}
+
+function setupStartMenu(){
+  let game=document.getElementById('game');
+  if(!game||document.getElementById('startScreen'))return;
+  let hasSave=(Number(s.total)||0)>0||(s.turtleCycle||1)>1||(s.machineParts||0)>0||(s.totalPrestigePoints||0)>0,
+      screen=document.createElement('div');
+  screen.id='startScreen';
+  screen.className='startScreen';
+  screen.setAttribute('role','dialog');
+  screen.setAttribute('aria-modal','true');
+  screen.setAttribute('aria-label','Idle Turtle Balls start menu');
+  screen.innerHTML='<div class="startBrand"><h1>Idle Turtle Balls</h1><span>The Clockwork Tower</span></div>'+
+    '<div class="startScene"><img class="startTower" src="assets/tower/chrono_tower.png" alt=""><div class="startWarden"></div><div class="startHero"></div></div>'+
+    '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
+    '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
+    '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
+    '<div class="startVersion">v0.60.1 FAIR HEARTS</div>'+
+    '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
+    '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
+  document.body.appendChild(screen);
+  game.inert=true;
+  saveStartMenuSettings();
+  let scorePanel=screen.querySelector('#startScorePanel'),settingsPanel=screen.querySelector('#startSettingsPanel'),
+      soundTool=screen.querySelector('#startSound'),soundOption=screen.querySelector('#startSoundOption'),
+      sideOption=screen.querySelector('#startSideOption'),fxOption=screen.querySelector('#startFxOption');
+  function closeStartPanels(){scorePanel.hidden=true;settingsPanel.hidden=true}
+  function updateStartOptions(){
+    soundTool.setAttribute('aria-pressed',startMenuSettings.sound?'true':'false');
+    soundOption.querySelector('em').textContent=startMenuSettings.sound?'ON':'OFF';
+    sideOption.querySelector('em').textContent=heroOnRight()?'RIGHT':'LEFT';
+    fxOption.querySelector('em').textContent=startMenuSettings.reducedFx?'REDUCED':'FULL';
+  }
+  function toggleSound(){startMenuSettings.sound=!startMenuSettings.sound;saveStartMenuSettings();updateStartOptions();if(startMenuSettings.sound)playStartMenuChime()}
+  function showStartScores(){
+    let list=scores(),target=screen.querySelector('#startMenuScores');
+    target.innerHTML=list.length?list.slice(0,5).map((row,index)=>'<div class="startMenuScore"><i>#'+(index+1)+'</i><b>'+esc(row.name)+'</b><span>LVL '+(row.level||1)+'</span></div>').join(''):'<div class="startMenuEmpty">NO SCORES YET</div>';
+    closeStartPanels();
+    scorePanel.hidden=false;
+  }
+  soundTool.addEventListener('click',toggleSound);
+  soundOption.addEventListener('click',toggleSound);
+  sideOption.addEventListener('click',()=>{s.heroSide=heroOnRight()?'left':'right';setBoss();saveGame();updateStartOptions()});
+  fxOption.addEventListener('click',()=>{startMenuSettings.reducedFx=!startMenuSettings.reducedFx;saveStartMenuSettings();updateStartOptions()});
+  screen.querySelector('#startScores').addEventListener('click',showStartScores);
+  screen.querySelector('#startSettings').addEventListener('click',()=>{closeStartPanels();settingsPanel.hidden=false});
+  screen.querySelectorAll('[data-start-close]').forEach(button=>button.addEventListener('click',closeStartPanels));
+  let fullscreenButton=screen.querySelector('#startFullscreen');
+  if(!document.documentElement.requestFullscreen)fullscreenButton.disabled=true;
+  fullscreenButton.addEventListener('click',async()=>{
+    try{
+      if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+      else if(document.exitFullscreen)await document.exitFullscreen();
+    }catch(e){}
+  });
+  screen.querySelector('#startPlay').addEventListener('click',()=>{
+    playStartMenuChime();
+    closeStartPanels();
+    screen.setAttribute('aria-hidden','true');
+    game.inert=false;
+    startMenuOpen=false;
+    lastFrame=performance.now();
+    frameAcc=0;
+    setTimeout(()=>screen.remove(),460);
+  });
+  updateStartOptions();
+  screen.querySelector('#startPlay').focus({preventScroll:true});
+}
+
 setupFeedbackUI();
+setupStartMenu();
 })();
