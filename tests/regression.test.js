@@ -18,9 +18,17 @@ const critChance=luck=>Math.min(.33,.03+Math.min(100,luck)*.003);
 const bossCritChance=luck=>Math.min(.20,.02+Math.min(100,luck)*.0018);
 const critDamage=luck=>4+Math.max(0,luck-100)*.08;
 const bossCritDamage=luck=>Math.min(5,2.5+Math.max(0,luck-100)*.025);
+const heroSkillBonus=(path,tier,hits,missing)=>{
+  if(path==='red')return Math.min(.75,.03*tier*Math.min(5,hits+1));
+  if(path==='laser')return .025*tier;
+  if(path==='bomb')return .06+.035*tier;
+  if(path==='blade')return .04*tier;
+  if(path==='dark')return Math.min(.46,.025*tier+missing*.07*tier);
+  return 0;
+};
 const closeTo=(actual,expected)=>Math.abs(actual-expected)<1e-9;
 
-for(const [name,growth] of Object.entries({ball:1.34,damage:1.42,speed:1.38,crit:1.54})){
+for(const [name,growth] of Object.entries({ball:1.30,damage:1.36,speed:1.33,crit:1.48})){
   assert.equal(upgradeCost(growth,0),20,name+' must start at 20 gold');
   const costs=Array.from({length:14},(_,level)=>upgradeCost(growth,level));
   assert(costs.every((cost,index)=>index===0||cost>costs[index-1]),name+' costs must rise every level');
@@ -43,6 +51,11 @@ assert.equal(critDamage(100),4);
 assert.equal(critDamage(125),6);
 assert.equal(bossCritDamage(100),2.5);
 assert.equal(bossCritDamage(500),5);
+assert.equal(heroSkillBonus('red',5,4,0),.75);
+assert.equal(heroSkillBonus('laser',5,0,0),.125);
+assert(closeTo(heroSkillBonus('bomb',5,0,0),.235));
+assert.equal(heroSkillBonus('blade',5,0,0),.20);
+assert.equal(heroSkillBonus('dark',5,0,1),.46);
 assert.equal(Math.floor(Math.sqrt(12000/12000)),1,'first prestige point should unlock at 12K total gold');
 
 const finalSetBoss=script.slice(script.lastIndexOf('function setBoss(){'),script.indexOf('\nfunction drawBossAsset',script.lastIndexOf('function setBoss(){')));
@@ -52,11 +65,31 @@ assert(script.includes("function setupTowerProgress()"),'tower progress UI must 
 assert(script.includes("classList.add('firstBuyCue')"),'first purchase cue must be available');
 assert(style.includes('.towerProgress'),'tower progress must be styled');
 assert(audio.includes("root.IdleTurtleAudio={unlock,play}"),'event sound module must expose its API');
-assert(index.includes('audio.js?v=0.63.0'),'audio module must load before gameplay');
-assert(index.includes('v0.63.0 First Run &amp; Balance'),'release version must be visible');
+assert(index.includes('audio.js?v=0.64.2'),'audio module must load before gameplay');
+assert(index.includes('v0.64.2 Prestige Preview'),'release version must be visible');
+
+for(const path of ['red','laser','bomb','blade','dark']){
+  assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
+}
+assert(script.includes("function heroSkillPierces(){return heroSkillPath()==='laser'&&heroSkillTier()>=3}"),'Rail Drive must pierce from Tier 3');
+assert(script.includes("if(path!=='dark'||tier<1||turtle.death>0)return"),'Void Core must steer the hero ball');
+assert(script.includes("if(path!=='bomb'||tier<3||turtle.death>0)return"),'Blast Core must gain proximity detonation');
+assert(script.includes("if(path==='blade'&&tier>=2)"),'Razor Drive must gain ricochet speed');
+assert(script.includes("if(path==='red'&&tier>=2)hero.life"),'Impact Core must extend flight time');
+assert(index.includes('<h2>Hero Ball Skills</h2>'),'upgrade panel must expose hero ball skills');
+assert(style.includes('.weaponTier[data-weapon="dark"].owned'),'skill paths must have distinct visual states');
+assert.equal((script.match(/\{short:'[^']+',name:'[^']+',detail:'/g)||[]).length,25,'every hero skill tier must have a description');
+assert(script.includes("detail.id='heroSkillDetail'"),'hero skill detail strip must be installed');
+assert(script.includes("b.addEventListener('pointerdown',inspect)"),'skill explanations must work on touch');
+assert(style.includes('.heroSkillDetail'),'skill explanations must be styled');
+assert(script.includes('function setupPrestigePreview()'),'prestige preview must be installed');
+assert(script.includes("panel.setAttribute('aria-modal','true')"),'prestige confirmation must be an accessible modal');
+assert(script.includes("s.money=0;s.total=0;s.balls=1+s.perm.startBall"),'confirmed prestige must reset the run');
+assert(style.includes('.prestigeTooltip'),'prestige hover information must be styled');
+assert(style.includes('.prestigeConfirm'),'prestige confirmation must be styled');
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.63.0')<index.indexOf('script.js?v=0.63.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.64.2')<index.indexOf('script.js?v=0.64.2'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, first-run UI and audio.');
+console.log('Regression checks passed: economy, crit, HP, first-run UI, audio and hero skills.');

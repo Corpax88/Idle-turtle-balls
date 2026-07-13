@@ -34,12 +34,31 @@ button.panelActive{filter:brightness(1.25);box-shadow:inset 0 2px 0 rgba(255,229
 .weaponRow{display:grid;grid-template-columns:82px repeat(5,1fr);gap:5px;align-items:center}
 .weaponName{font-size:10px;font-weight:900;color:#fecdd3;text-shadow:0 1px 0 #000;line-height:1.1}
 .weaponName span{display:block;margin-top:3px;font-size:7.5px;line-height:1.15;color:#cbd5e1;font-weight:600;text-shadow:none}
-.weaponTier{min-height:40px;background:linear-gradient(180deg,#3b0b10,#140407);border-color:#ef4444;color:#fee2e2;box-shadow:inset 0 2px 0 rgba(248,113,113,.35),inset 0 -4px 0 rgba(69,10,10,.45),0 4px 0 #160407,0 0 0 1px rgba(0,0,0,.35)}
+.weaponTier{min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:3px 2px;background:linear-gradient(180deg,#3b0b10,#140407);border-color:#ef4444;color:#fee2e2;box-shadow:inset 0 2px 0 rgba(248,113,113,.35),inset 0 -4px 0 rgba(69,10,10,.45),0 4px 0 #160407,0 0 0 1px rgba(0,0,0,.35)}
+.weaponTier i{font-style:normal;font-size:13px;line-height:1}
+.weaponTier small{display:block;max-width:100%;overflow:hidden;font-size:6.5px;line-height:1;color:#fff7ed;letter-spacing:0;text-overflow:clip}
 .weaponTier:before{content:''}
 .weaponTier:after{background:#ef4444;box-shadow:-8px 0 #7f1d1d}
 .weaponTier.owned{background:linear-gradient(180deg,#ef4444,#7f1d1d);border-color:#fecaca;box-shadow:inset 0 2px 0 rgba(254,202,202,.5),inset 0 -4px 0 rgba(69,10,10,.45),0 4px 0 #160407,0 0 16px rgba(239,68,68,.45)}
+.weaponTier[data-weapon="laser"].owned{background:linear-gradient(180deg,#0891b2,#164e63);border-color:#a5f3fc}
+.weaponTier[data-weapon="bomb"].owned{background:linear-gradient(180deg,#ea580c,#7c2d12);border-color:#fed7aa}
+.weaponTier[data-weapon="blade"].owned{background:linear-gradient(180deg,#e11d48,#881337);border-color:#fecdd3}
+.weaponTier[data-weapon="dark"].owned{background:linear-gradient(180deg,#9333ea,#3b0764);border-color:#e9d5ff}
 .weaponTier.active{filter:brightness(1.28);box-shadow:inset 0 2px 0 rgba(254,202,202,.6),inset 0 -4px 0 rgba(69,10,10,.3),0 4px 0 #160407,0 0 24px rgba(248,113,113,.72)}
+.weaponTier.inspecting{outline:2px solid #fff7ed;outline-offset:-3px;filter:brightness(1.18)}
 .weaponTier.locked{opacity:.34;filter:grayscale(.45)}
+.heroSkillDetail{--skill-color:#ef4444;display:grid;grid-template-columns:36px minmax(0,1fr);gap:9px;align-items:center;min-height:64px;margin:-5px 0 14px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--skill-color) 58%,#334155);border-left:4px solid var(--skill-color);border-radius:6px;background:linear-gradient(90deg,color-mix(in srgb,var(--skill-color) 16%,#080d1c),rgba(8,13,28,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.heroSkillDetail>i{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--skill-color);border-radius:50%;background:#080d1c;color:var(--skill-color);font-size:17px;font-style:normal;font-weight:900;box-shadow:0 0 12px color-mix(in srgb,var(--skill-color) 38%,transparent)}
+.heroSkillDetail div{min-width:0;line-height:1.15}.heroSkillDetail span{display:block;color:var(--skill-color);font-size:7.5px;font-weight:900;text-transform:uppercase}.heroSkillDetail b{display:block;margin-top:2px;color:#fff7ed;font-size:11px}.heroSkillDetail small{display:block;margin-top:3px;color:#cbd5e1;font-size:9px;font-weight:650;line-height:1.25}
+.prestigeTooltip{position:fixed;z-index:30;display:none;width:min(230px,calc(100vw - 16px));padding:8px 10px;border:1px solid #38bdf8;border-radius:6px;background:rgba(3,17,27,.98);box-shadow:0 8px 24px rgba(0,0,0,.55),inset 0 1px 0 rgba(186,230,253,.18);pointer-events:none;text-align:center}
+.prestigeTooltip.show{display:grid;gap:2px;animation:prestigeTipIn .12s ease-out}.prestigeTooltip b{color:#7dd3fc;font-size:9px}.prestigeTooltip span{color:#e0f2fe;font-size:9px;font-weight:750;line-height:1.25}
+.prestigeConfirm{position:absolute;left:50%;top:50%;z-index:8;display:none;width:min(350px,calc(100% - 24px));padding:16px;transform:translate(-50%,-50%) scale(.92);border:2px solid #38bdf8;border-radius:8px;background:linear-gradient(180deg,rgba(8,32,49,.99),rgba(4,10,18,.995));box-shadow:inset 0 1px 0 rgba(186,230,253,.24),inset 0 -5px 0 rgba(0,0,0,.42),0 16px 48px rgba(0,0,0,.78);text-align:center;opacity:0}
+.prestigeConfirm.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1);animation:mergeConfirmIn .18s ease-out}.prestigeSeal{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 5px;border:2px solid #7dd3fc;border-radius:50%;background:#082f49;color:#e0f2fe;font-size:28px;box-shadow:0 0 22px rgba(56,189,248,.4)}
+.prestigeEyebrow{color:#7dd3fc;font-size:8px;font-weight:1000;letter-spacing:1px}.prestigeConfirm h2{margin:3px 0 10px;color:#fff7ed;font-size:18px}.prestigeReward{display:grid;gap:2px;padding:9px;border-top:1px solid rgba(125,211,252,.24);border-bottom:1px solid rgba(125,211,252,.24);background:rgba(14,116,144,.12)}
+.prestigeReward span{color:#94a3b8;font-size:8px;font-weight:900}.prestigeReward b{color:#7dd3fc;font-size:24px}.prestigeReward small{color:#e0f2fe;font-size:10px;font-weight:800}.prestigeTrade{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.prestigeTrade>div{display:grid;gap:4px;padding:8px 5px;border:1px solid rgba(148,163,184,.22);border-radius:5px;background:rgba(15,23,42,.64)}
+.prestigeTrade b{font-size:8px;letter-spacing:.6px}.prestigeTrade span{font-size:8px;color:#cbd5e1;line-height:1.2}.prestigeReset b{color:#fca5a5}.prestigeKeep b{color:#86efac}.prestigeRun{margin-bottom:10px;color:#94a3b8;font-size:8px;font-weight:800}.prestigeActions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}.prestigeActions button{min-height:44px}.prestigeActions button:before{content:none}
+#doPrestige.prestigeWaiting{filter:saturate(.62);opacity:.82}#doPrestige.prestigeReady{box-shadow:inset 0 2px 0 rgba(186,230,253,.55),inset 0 -4px 0 rgba(7,89,133,.35),0 4px 0 #083344,0 0 18px rgba(56,189,248,.52)}
+@keyframes prestigeTipIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes panelPop{0%{transform:scale(.90);opacity:.4}100%{transform:scale(1);opacity:1}}
 @keyframes shadeIn{0%{opacity:0}100%{opacity:1}}
 

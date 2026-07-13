@@ -7,6 +7,7 @@ Et lite idle/clicker-spill bygget som en statisk nettside.
 - `index.html` - HTML-struktur
 - `style.css` - all styling
 - `script.js` - all gameplay-logikk
+- `audio.js` - hendelsesbaserte Web Audio-effekter
 
 ## Idle-progresjon
 
@@ -14,14 +15,24 @@ Spillet lagrer en glattet versjon av faktisk gold per sekund. Ved retur gis 35 %
 
 ## First Run & Balance
 
-- HUD-en viser de ti stegene frem til neste boss og målet på level 100.
-- Første hero-kast og første kjøp får visuelle signaler uten forklarende dialoger.
-- `audio.js` gir hendelsesbasert lyd til kast, treff, crit, kjøp, merge og bossøyeblikk.
-- Balansekontrakten bevarer startkostnad 20, første PP ved 12K total gold og eksisterende HP-/crit-kurver.
+- HUD-en viser de ti stegene frem til neste boss og malet pa level 100.
+- Forste hero-kast og forste kjop far visuelle signaler uten forklarende dialoger.
+- `audio.js` gir lyd til kast, treff, crit, kjop, merge og boss-oyeblikk.
+- Balansekontrakten bevarer startkostnad 20, forste PP ved 12K total gold og eksisterende HP-/crit-kurver.
+
+## Hero Ball Skills
+
+Weapon tree styrer bade hero-ballen i idle og hero-skuddene i bosskamper:
+
+- Impact Core bygger combo og forlenger gode kast.
+- Rail Drive refrakterer mot malet og piercer fra Tier 3.
+- Blast Core gir eksplosive treff og proximity detonation.
+- Razor Drive bygger ricochet-fart og cutting damage.
+- Void Core styrer mot malet og skalerer med manglende HP.
 
 ## Tester
 
-Kjør de lokale regresjonstestene med:
+Kjor de lokale regresjonstestene med:
 
 ```powershell
 node --check audio.js

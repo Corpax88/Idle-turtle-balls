@@ -234,7 +234,7 @@ ctx.restore();}function drawTowerScene(){let ts=towerScene||{life:0,duration:1,f
 bind(els.devResetSave,()=>{try{localStorage.removeItem(key);localStorage.clear()}catch(e){}s=freshSave();balls=[];parts=[];turtleChips=[];bossShots=[];enemyShots=[];turtle.death=0;turtle.hp=0;boss.hp=0;player.hp=3;player.maxHp=3;setTurtle();turtle.hp=turtle.max;setBoss();syncBalls();closePanels();ui();toast('Hard reset OK! \u{1F9F9}')});function setPlayerFromEvent(e){let t=e.touches?e.touches[0]:e,r=els.canvas.getBoundingClientRect();player.targetX=(t.clientX-r.left)*W/r.width;player.targetY=(t.clientY-r.top)*H/r.height}function heroDown(e){if(!heroReady())return false;let p=getCanvasPoint(e),dx=p.x-hero.baseX,dy=p.y-hero.baseY;if(dx*dx+dy*dy<52*52){hero.state='drag';hero.drag=true;hero.dx=p.x-hero.baseX;hero.dy=p.y-hero.baseY;hero.x=p.x;hero.y=p.y;return true}return false}function heroMove(e){if(hero.state!=='drag')return false;let p=getCanvasPoint(e);hero.dx=p.x-hero.baseX;hero.dy=p.y-hero.baseY;return true}function heroUp(e){if(hero.state!=='drag')return false;fireHero();return true}els.canvas.addEventListener('pointerdown',e=>{if(heroDown(e)){e.preventDefault();els.canvas.setPointerCapture&&els.canvas.setPointerCapture(e.pointerId);return}if(s.mode==='boss'){setPlayerFromEvent(e);els.canvas.setPointerCapture&&els.canvas.setPointerCapture(e.pointerId)}});els.canvas.addEventListener('pointermove',e=>{if(heroMove(e)){e.preventDefault();return}if(s.mode==='boss')setPlayerFromEvent(e)});els.canvas.addEventListener('pointerup',e=>{if(heroUp(e)){e.preventDefault();return}});els.canvas.addEventListener('pointercancel',e=>{if(hero.state==='drag')resetHero(20)});els.canvas.addEventListener('touchstart',e=>{if(heroDown(e)){e.preventDefault();return}if(s.mode==='boss'){e.preventDefault();setPlayerFromEvent(e)}},{passive:false});els.canvas.addEventListener('touchmove',e=>{if(heroMove(e)){e.preventDefault();return}if(s.mode==='boss'){e.preventDefault();setPlayerFromEvent(e)}},{passive:false});els.canvas.addEventListener('touchend',e=>{if(heroUp(e)){e.preventDefault();return}},{passive:false});let lastTouchEnd=0;document.addEventListener('touchend',e=>{let now=Date.now();if(now-lastTouchEnd<320)e.preventDefault();lastTouchEnd=now},{passive:false});document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('contextmenu',e=>{if(e.target&&e.target.closest&&e.target.closest('#game'))e.preventDefault()});window.addEventListener('resize',resize);if(window.visualViewport){window.visualViewport.addEventListener('resize',resize);window.visualViewport.addEventListener('scroll',resize)}resize();setupShopMeters();s.balls=Math.max(s.balls,1+s.perm.startBall);syncBalls();claimIdle(Date.now());ui();setInterval(saveGame,1500);setInterval(()=>{pps=idleEarned;idleEarned=0;lastMoney=s.money;if(s.mode==='turtle')s.idleRate=Math.max(0,(Number(s.idleRate)||0)*.92+pps*.08)},1000);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();else{claimIdle(Date.now());ui();saveGame()}});window.addEventListener('pagehide',saveGame);function loop(now){if(!lastFrame)lastFrame=now;let dt=Math.min(MAX_FRAME_MS,Math.max(0,now-lastFrame));lastFrame=now;frameAcc+=dt;let steps=0;while(frameAcc>=STEP_MS&&steps<5){update(STEP_MS/1000);frameAcc-=STEP_MS;steps++}if(steps===5)frameAcc=0;draw();ui();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function critPopup(x,y,v,scale){scale=scale||1;let laneX=W-70;parts.push({x:laneX,y:48,baseX:laneX,life:40,max:40,text:'\u2726 +'+fmt(v),c:'#ef4444',special:true,arc:(Math.random()-.5)*.12,kind:'critText',scale})}
 
-function resetHero(cool){hero.state='cooldown';hero.cd=cool||75;hero.drag=false;hero.x=hero.baseX;hero.y=hero.baseY;hero.vx=0;hero.vy=0;hero.life=0;hero.px=null;hero.py=null;hero.trail=[]}
+function resetHero(cool){hero.state='cooldown';hero.cd=cool||75;hero.drag=false;hero.x=hero.baseX;hero.y=hero.baseY;hero.vx=0;hero.vy=0;hero.life=0;hero.px=null;hero.py=null;hero.trail=[];hero.skillHits=0;hero.wallHits=0;hero.skillProc=0}
 
 function startHeroDetonation(){
   if(hero.state!=='flying')return;
@@ -246,6 +246,7 @@ function startHeroDetonation(){
   shake=Math.max(shake,6);
   spawnJuice(hero.x,hero.y,'hit',.52,'#ef4444');
   heroFx.push({x:hero.x,y:hero.y,life:20,max:20,kind:4,c:'#ef4444',s:'#111827',spin:0,burst:4,alpha:.42});
+  heroSkillDetonate();
 }
 
 function updateHero(){
@@ -261,6 +262,7 @@ function updateHero(){
     hero.x=hero.baseX+hero.dx;
     hero.y=hero.baseY+hero.dy;
   }else if(hero.state==='flying'){
+    applyHeroSkillFlight();
     hero.px=hero.x;
     hero.py=hero.y;
     hero.trail.push({x:hero.x,y:hero.y,life:28,max:28});
@@ -269,20 +271,28 @@ function updateHero(){
     hero.y+=hero.vy;
     if(turtle.death<=0)hero.life--;
     hero.hitCd=Math.max(0,hero.hitCd-1);
-    if(hero.x<hero.r||hero.x>W-hero.r){hero.vx*=-.98;hero.x=Math.max(hero.r,Math.min(W-hero.r,hero.x))}
-    if(hero.y<hero.r||hero.y>H-hero.r){hero.vy*=-.98;hero.y=Math.max(hero.r,Math.min(H-hero.r,hero.y))}
+    let bounced=false;
+    if(hero.x<hero.r||hero.x>W-hero.r){hero.vx*=-.98;hero.x=Math.max(hero.r,Math.min(W-hero.r,hero.x));bounced=true}
+    if(hero.y<hero.r||hero.y>H-hero.r){hero.vy*=-.98;hero.y=Math.max(hero.r,Math.min(H-hero.r,hero.y));bounced=true}
+    if(bounced)heroSkillWallBounce();
     heroBallCollisions();
     let tc=turtleCollision(hero.x,hero.y,hero.r);
     if(turtle.death<=0&&hero.hitCd<=0&&tc){
+      let pierce=heroSkillPierces();
       heroHit();
-      hero.hitCd=16;
-      let dot=hero.vx*tc.nx+hero.vy*tc.ny;
-      hero.vx-=2*dot*tc.nx;
-      hero.vy-=2*dot*tc.ny;
-      hero.vx*=1.10;
-      hero.vy*=1.10;
-      hero.x=tc.x;
-      hero.y=tc.y;
+      hero.hitCd=pierce?24:16;
+      if(pierce){
+        hero.x+=hero.vx*1.2;
+        hero.y+=hero.vy*1.2;
+      }else{
+        let dot=hero.vx*tc.nx+hero.vy*tc.ny;
+        hero.vx-=2*dot*tc.nx;
+        hero.vy-=2*dot*tc.ny;
+        hero.vx*=1.10;
+        hero.vy*=1.10;
+        hero.x=tc.x;
+        hero.y=tc.y;
+      }
     }
     if(hero.life<=0)startHeroDetonation();
   }else if(hero.state==='detonating'){
@@ -294,13 +304,14 @@ function updateHero(){
 function drawHeroTrail(){
   let trail=hero.trail||[];
   if(!trail.length)return;
+  let palette=heroSkillPalette();
   ctx.save();
   ctx.globalCompositeOperation='lighter';
   ctx.lineCap='round';
   for(let i=1;i<trail.length;i++){
     let a=Math.max(0,trail[i].life/trail[i].max),p=i/trail.length;
     ctx.globalAlpha=a*.48;
-    ctx.strokeStyle=p>.55?'#ef4444':'#f97316';
+    ctx.strokeStyle=p>.55?palette.main:palette.edge;
     ctx.lineWidth=2+p*5;
     ctx.beginPath();
     ctx.moveTo(trail[i-1].x,trail[i-1].y);
@@ -319,7 +330,7 @@ function drawHero(){
   ctx.textAlign='center';
   ctx.save();
   ctx.translate(hero.baseX,hero.baseY);
-  ctx.strokeStyle=ready?'rgba(250,204,21,.95)':'rgba(148,163,184,.6)';
+  ctx.strokeStyle=ready?heroSkillPalette().main:'rgba(148,163,184,.6)';
   ctx.lineWidth=4;
   ctx.beginPath();
   ctx.arc(0,0,31*pulse,0,Math.PI*2);
@@ -429,6 +440,7 @@ function drawHero(){
   }
   let b={x:hero.x,y:hero.y,r:detonating?hero.r*(1+Math.sin(time/45)*.12):(ready?hero.r+1:hero.r),rar:hero.rar||'shiny',hue:hero.hue,px:flying?hero.px:null,py:flying?hero.py:null,hero:true};
   drawBall(b);
+  drawHeroSkillMark(hero.x,hero.y,hero.r,time);
   ctx.restore();
 }
 
@@ -453,23 +465,49 @@ function respecWeapon(){
   return true;
 }
 
+function showHeroSkillDetail(path,tier){
+  if(!els.heroSkillDetail||!HERO_SKILL_PATHS||!HERO_SKILL_PATHS[path])return;
+  let tree=HERO_SKILL_PATHS[path],safeTier=Math.max(1,Math.min(5,Number(tier)||1)),skill=tree.tiers[safeTier-1];
+  heroSkillInspect={path:path,tier:safeTier};
+  els.heroSkillDetail.style.setProperty('--skill-color',tree.palette.main);
+  els.heroSkillDetail.innerHTML='<i>'+tree.icon+'</i><div><span>'+tree.name+' • TIER '+safeTier+'</span><b>'+skill.name+'</b><small>'+skill.detail+'</small></div>';
+  if(els.weaponTree)els.weaponTree.querySelectorAll('button[data-weapon]').forEach(button=>{
+    button.classList.toggle('inspecting',button.dataset.weapon===path&&Number(button.dataset.tier)===safeTier);
+  });
+}
+
 function renderWeaponTree(){
   if(!els.weaponTree||!s.weapon)return;
-  let sig=JSON.stringify(s.weapon)+'|'+s.purple;
+  let sig=JSON.stringify(s.weapon)+'|'+s.purple+'|'+(HERO_SKILL_PATHS?'skills':'legacy');
   if(sig===weaponTreeSig)return;
   weaponTreeSig=sig;
   let active=activeWeapon(),path=weaponPath(),respec=weaponRespecCost(),spent=weaponSpentLevels(),canReset=spent>0&&s.purple>=respec,canTry=spent>0;
   els.weaponTree.innerHTML=WEAPON_TYPES.map(w=>{
     let lvl=weaponTier(w.id),cost=weaponCost(w.id),rowLocked=!!path&&path!==w.id,cells='';
     for(let i=1;i<=5;i++){
-      let owned=lvl>=i,locked=rowLocked||(!owned&&i>lvl+1),can=s.purple>=cost&&!locked,txt=owned?w.icon:(locked?'\u00d7':'\u{1F49C}'+cost);
-      cells+='<button class="weaponTier '+(owned?'owned ':'')+(active===w.id&&owned?'active ':'')+(locked?'locked ':'')+(rowLocked?'pathLocked ':'')+(can?'canBuy ':'')+'" data-weapon="'+w.id+'" data-tier="'+i+'">'+txt+'</button>';
+      let owned=lvl>=i,locked=rowLocked||(!owned&&i>lvl+1),can=s.purple>=cost&&!locked,skill=HERO_SKILL_PATHS&&HERO_SKILL_PATHS[w.id]&&HERO_SKILL_PATHS[w.id].tiers[i-1],short=skill?skill.short:'T'+i,txt=owned?'<i>'+w.icon+'</i><small>'+short+'</small>':(locked?'\u00d7':'\u{1F49C}'+cost),title=skill?skill.name+': '+skill.detail:'Tier '+i;
+      cells+='<button class="weaponTier '+(owned?'owned ':'')+(active===w.id&&owned?'active ':'')+(locked?'locked ':'')+(rowLocked?'pathLocked ':'')+(can?'canBuy ':'')+'" data-weapon="'+w.id+'" data-tier="'+i+'" title="'+title+'" aria-label="'+w.name+' '+title+'">'+txt+'</button>';
     }
     return '<div class="weaponRow '+(rowLocked?'pathLocked ':'')+'"><div class="weaponName">'+w.name+'<span>'+w.desc+'</span></div>'+cells+'</div>';
   }).join('')+'<button class="weaponRespec '+(canReset?'canBuy ':'')+'" data-respec="1" '+(canTry?'':'disabled')+'><span>\u21bb</span> RESPEC <b>\u{1F49C}'+respec+'</b></button>';
-  els.weaponTree.querySelectorAll('button[data-weapon]').forEach(b=>b.onclick=e=>{e.preventDefault();buyWeapon(b.dataset.weapon)});
+  els.weaponTree.querySelectorAll('button[data-weapon]').forEach(b=>{
+    let inspect=()=>showHeroSkillDetail(b.dataset.weapon,Number(b.dataset.tier));
+    b.addEventListener('pointerenter',inspect);
+    b.addEventListener('pointerdown',inspect);
+    b.addEventListener('focus',inspect);
+    b.onclick=e=>{
+      e.preventDefault();
+      inspect();
+      let requested=Number(b.dataset.tier),current=weaponTier(b.dataset.weapon);
+      if(b.classList.contains('locked')||requested!==current+1)return;
+      buyWeapon(b.dataset.weapon);
+      showHeroSkillDetail(b.dataset.weapon,Math.max(1,weaponTier(b.dataset.weapon)));
+    };
+  });
   let rb=els.weaponTree.querySelector('button[data-respec]');
   if(rb)rb.onclick=e=>{e.preventDefault();respecWeapon()};
+  let inspected=heroSkillInspect&&HERO_SKILL_PATHS&&HERO_SKILL_PATHS[heroSkillInspect.path]?heroSkillInspect:null;
+  showHeroSkillDetail(inspected?inspected.path:active,inspected?inspected.tier:Math.max(1,weaponTier(active)));
 }
 
 function renderStatsPanel(){
@@ -481,7 +519,7 @@ function renderStatsPanel(){
     ['\u00bb','SPEED',s.speed],
     ['\u2726','IDLE CRIT',critPct+'%  \u00d7'+critDamage().toFixed(1)],
     ['\u2665','BOSS CRIT',bossCritPct+'%  \u00d7'+bossCritDamage().toFixed(1)],
-    ['\u2699','WEAPON',weapon.toUpperCase()+' T'+tier],
+    ['\u2699','HERO SKILL',weapon.toUpperCase()+' T'+tier],
     ['$','EST. POWER',fmt(idleEstimate())+'/s'],
     ['\u265b','BOSSES',s.machineParts||0]
   ];
@@ -821,7 +859,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.63.0 FIRST RUN &amp; BALANCE</div>'+
+    '<div class="startVersion">v0.64.2 PRESTIGE PREVIEW</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1034,6 +1072,188 @@ openPanel=function(which){
   return firstRunOpenPanel(which);
 };
 
+var heroSkillInspect={path:null,tier:0};
+var HERO_SKILL_PATHS={
+  red:{name:'Impact Core',desc:'Combo damage \u2022 longer flight',icon:'\u25c6',palette:{main:'#ef4444',edge:'#f97316'},tiers:[
+    {short:'CORE',name:'Impact Core',detail:'Each turtle hit builds a stacking damage combo.'},
+    {short:'FUEL',name:'Hot Fuel',detail:'Wall bounces restore hero-ball fuel.'},
+    {short:'COMBO',name:'Momentum Combo',detail:'Turtle hits restore more fuel and strengthen the combo.'},
+    {short:'DRIVE',name:'Overdrive',detail:'Higher combo scaling keeps strong runs alive longer.'},
+    {short:'NOVA',name:'Red Nova',detail:'Maximum combo reaches +75% impact damage.'}
+  ]},
+  laser:{name:'Rail Drive',desc:'Refract \u2022 pierce at T3',icon:'\u2501',palette:{main:'#67e8f9',edge:'#2563eb'},tiers:[
+    {short:'BEAM',name:'Rail Beam',detail:'Adds focused impact damage to the hero ball.'},
+    {short:'AIM',name:'Refractor',detail:'Wall bounces bend the ball back toward the turtle.'},
+    {short:'PHASE',name:'Phase Pierce',detail:'Passes through the turtle instead of bouncing away.'},
+    {short:'FOCUS',name:'Focused Rail',detail:'Stronger refraction and higher focused damage.'},
+    {short:'STORM',name:'Railstorm',detail:'Maximum steering and +12.5% impact damage.'}
+  ]},
+  bomb:{name:'Blast Core',desc:'Impact burst \u2022 proximity detonation',icon:'\u25cf',palette:{main:'#f97316',edge:'#ef4444'},tiers:[
+    {short:'FUSE',name:'Hot Fuse',detail:'Every turtle hit triggers bonus explosive damage.'},
+    {short:'BLAST',name:'Blast Charge',detail:'Increases the damage of every impact burst.'},
+    {short:'BURST',name:'Proximity Burst',detail:'Fuel expiry detonates when the turtle is nearby.'},
+    {short:'PAYLOAD',name:'Heavy Payload',detail:'Expands detonation range and explosive damage.'},
+    {short:'CAT',name:'Cataclysm',detail:'Maximum payload, blast range and impact damage.'}
+  ]},
+  blade:{name:'Razor Drive',desc:'Ricochet speed \u2022 cutting strikes',icon:'\u2726',palette:{main:'#fb7185',edge:'#e11d48'},tiers:[
+    {short:'EDGE',name:'Razor Edge',detail:'Turtle hits deal bonus cutting damage.'},
+    {short:'TWIN',name:'Twin Cut',detail:'Wall ricochets begin accelerating the hero ball.'},
+    {short:'RICO',name:'Ricochet Drive',detail:'Turtle hits add another burst of speed.'},
+    {short:'CYCLONE',name:'Cyclone',detail:'Raises the ricochet speed cap and cutting damage.'},
+    {short:'STORM',name:'Bladestorm',detail:'Maximum ricochet speed and +20% impact damage.'}
+  ]},
+  dark:{name:'Void Core',desc:'Homing \u2022 missing-HP damage',icon:'\u25c9',palette:{main:'#c084fc',edge:'#7e22ce'},tiers:[
+    {short:'PULL',name:'Gravity Pull',detail:'The hero ball slowly curves toward the turtle.'},
+    {short:'DRAIN',name:'Void Drain',detail:'Damage increases as the turtle loses HP.'},
+    {short:'SEEK',name:'Dark Seeker',detail:'Strengthens homing and missing-HP damage.'},
+    {short:'RIFT',name:'Rift Drive',detail:'Faster pull creates more reliable return hits.'},
+    {short:'EXEC',name:'Singularity',detail:'Execute damage can reach +46% per impact.'}
+  ]}
+};
+
+function heroSkillPath(){return activeWeapon()}
+function heroSkillTier(){return weaponTier(heroSkillPath())}
+function heroSkillData(){return HERO_SKILL_PATHS[heroSkillPath()]||HERO_SKILL_PATHS.red}
+function heroSkillPalette(){return heroSkillData().palette}
+
+function setupHeroBallSkills(){
+  WEAPON_TYPES.forEach(weapon=>{
+    const skill=HERO_SKILL_PATHS[weapon.id];
+    if(!skill)return;
+    weapon.name=skill.name;
+    weapon.desc=skill.desc;
+    weapon.icon=skill.icon;
+    weapon.c=skill.palette.main;
+  });
+  const heading=els.weaponTree&&els.weaponTree.previousElementSibling;
+  if(heading&&heading.tagName==='H2')heading.textContent='Hero Ball Skills';
+  if(els.weaponTree&&!document.getElementById('heroSkillDetail')){
+    let detail=document.createElement('div');
+    detail.id='heroSkillDetail';
+    detail.className='heroSkillDetail';
+    detail.setAttribute('aria-live','polite');
+    els.weaponTree.insertAdjacentElement('afterend',detail);
+  }
+  els.heroSkillDetail=document.getElementById('heroSkillDetail');
+  weaponTreeSig='';
+  renderWeaponTree();
+}
+
+function heroSkillPierces(){return heroSkillPath()==='laser'&&heroSkillTier()>=3}
+
+function applyHeroSkillFlight(){
+  const path=heroSkillPath(),tier=heroSkillTier();
+  if(path!=='dark'||tier<1||turtle.death>0)return;
+  const tx=turtle.x,ty=turtle.y-turtle.size*.48,dx=tx-hero.x,dy=ty-hero.y,len=Math.sqrt(dx*dx+dy*dy)||1,speed=Math.sqrt(hero.vx*hero.vx+hero.vy*hero.vy)||1,turn=.0018+tier*.00075;
+  hero.vx=(hero.vx/speed*(1-turn)+dx/len*turn)*speed;
+  hero.vy=(hero.vy/speed*(1-turn)+dy/len*turn)*speed;
+}
+
+function heroSkillWallBounce(){
+  const path=heroSkillPath(),tier=heroSkillTier();
+  hero.wallHits=(hero.wallHits||0)+1;
+  if(path==='red'&&tier>=2)hero.life=Math.min(390,hero.life+2+tier);
+  if(path==='laser'&&tier>=2&&turtle.death<=0){
+    const dx=turtle.x-hero.x,dy=turtle.y-turtle.size*.48-hero.y,len=Math.sqrt(dx*dx+dy*dy)||1,speed=Math.sqrt(hero.vx*hero.vx+hero.vy*hero.vy)||1,focus=Math.min(.38,.08+tier*.035);
+    hero.vx=(hero.vx/speed*(1-focus)+dx/len*focus)*speed;
+    hero.vy=(hero.vy/speed*(1-focus)+dy/len*focus)*speed;
+  }
+  if(path==='blade'&&tier>=2){
+    const speed=Math.sqrt(hero.vx*hero.vx+hero.vy*hero.vy)||1,max=(hero.launchSpeed||speed)*(1.18+tier*.035),next=Math.min(max,speed*(1.012+tier*.006));
+    hero.vx=hero.vx/speed*next;
+    hero.vy=hero.vy/speed*next;
+  }
+}
+
+function heroSkillBonus(base,beforeHp){
+  const path=heroSkillPath(),tier=heroSkillTier(),hits=hero.skillHits||0;
+  if(path==='red')return base*Math.min(.75,.03*tier*Math.min(5,hits+1));
+  if(path==='laser')return base*.025*tier;
+  if(path==='bomb')return base*(.06+.035*tier);
+  if(path==='blade')return base*.04*tier;
+  if(path==='dark'){
+    const missing=1-Math.max(0,beforeHp)/Math.max(1,turtle.max);
+    return base*Math.min(.46,.025*tier+missing*.07*tier);
+  }
+  return 0;
+}
+
+function heroSkillImpactFx(path,tier){
+  const palette=heroSkillPalette(),kind=path==='laser'?3:(path==='bomb'?4:(path==='blade'?6:(path==='dark'?9:'critCore')));
+  heroFx.push({x:hero.x,y:hero.y,life:18+tier*2,max:18+tier*2,kind,c:palette.main,s:palette.edge,spin:Math.random()*6,burst:Math.min(9,3+tier),scale:.45+tier*.035,alpha:.38});
+}
+
+const baseHeroSkillHit=heroHit;
+heroHit=function(){
+  const beforeHp=turtle.hp,path=heroSkillPath(),tier=heroSkillTier();
+  baseHeroSkillHit();
+  const base=Math.max(0,beforeHp-Math.max(0,turtle.hp));
+  hero.skillHits=(hero.skillHits||0)+1;
+  if(base<=0||turtle.death>0)return;
+  const bonus=Math.max(0,heroSkillBonus(base,beforeHp));
+  if(bonus>0){
+    turtle.hp-=bonus;
+    earn(bonus,hero.x,hero.y,null);
+    heroSkillImpactFx(path,tier);
+  }
+  if(path==='red'&&tier>=3)hero.life=Math.min(410,hero.life+2+tier);
+  if(path==='blade'&&tier>=3){
+    const speed=Math.sqrt(hero.vx*hero.vx+hero.vy*hero.vy)||1,boost=Math.min(1.10,1.018+tier*.008);
+    hero.vx=hero.vx/speed*speed*boost;
+    hero.vy=hero.vy/speed*speed*boost;
+  }
+  if(turtle.hp<=0)startTurtleDeath();
+};
+
+function heroSkillDetonate(){
+  const path=heroSkillPath(),tier=heroSkillTier();
+  if(path!=='bomb'||tier<3||turtle.death>0)return;
+  const dx=hero.x-turtle.x,dy=hero.y-(turtle.y-turtle.size*.48),range=105+tier*13;
+  if(dx*dx+dy*dy>range*range)return;
+  const damage=ballDamage(hero,2.2+tier*.55,1),palette=heroSkillPalette();
+  turtle.hp-=damage;
+  earn(damage,hero.x,hero.y,null);
+  spawnJuice(hero.x,hero.y,'hit',.52+tier*.06,palette.main);
+  heroFx.push({x:hero.x,y:hero.y,life:28,max:28,kind:4,c:palette.main,s:palette.edge,spin:0,burst:5+tier,alpha:.48});
+  if(turtle.hp<=0)startTurtleDeath();
+}
+
+function drawHeroSkillMark(x,y,r,time){
+  const skill=heroSkillData(),tier=heroSkillTier(),pulse=1+Math.sin(time/120)*.08;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.globalAlpha=.88;
+  ctx.strokeStyle=skill.palette.main;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.arc(0,0,(r*.48)*pulse,0,Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle=skill.palette.main;
+  ctx.font='900 '+Math.max(8,r*.48)+'px system-ui';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(skill.icon,0,.5);
+  for(let i=0;i<Math.min(5,tier);i++){
+    const angle=-Math.PI/2+i*Math.PI*2/5;
+    ctx.beginPath();
+    ctx.arc(Math.cos(angle)*r*.72,Math.sin(angle)*r*.72,1.6,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+const heroSkillFire=fireHero;
+fireHero=function(){
+  const before=hero.state;
+  heroSkillFire();
+  if(before==='drag'&&hero.state==='flying'){
+    hero.skillHits=0;
+    hero.wallHits=0;
+    hero.skillProc=0;
+    hero.launchSpeed=Math.sqrt(hero.vx*hero.vx+hero.vy*hero.vy)||1;
+  }
+};
+
 const soundFireHero=fireHero;
 fireHero=function(){
   const before=hero.state;
@@ -1107,8 +1327,113 @@ update=function(dt){
   }
 };
 
+function setupPrestigePreview(){
+  if(!els.area||!els.doPrestige||document.getElementById('prestigeConfirm'))return;
+
+  const panel=document.createElement('div');
+  panel.id='prestigeConfirm';
+  panel.className='prestigeConfirm';
+  panel.setAttribute('role','dialog');
+  panel.setAttribute('aria-modal','true');
+  panel.setAttribute('aria-labelledby','prestigeConfirmTitle');
+  panel.innerHTML='<div class="prestigeSeal">\u25c7</div><span class="prestigeEyebrow">PERMANENT PROGRESS</span><h2 id="prestigeConfirmTitle">Prestige this run?</h2><div class="prestigeReward"><span>YOU RECEIVE</span><b id="prestigePreviewGain">+0 PP</b><small id="prestigePreviewPower">Permanent power</small></div><div class="prestigeTrade"><div class="prestigeReset"><b>RESETS</b><span>Gold \u2022 Level \u2022 Balls</span><span>Damage \u2022 Speed \u2022 Crit</span></div><div class="prestigeKeep"><b>KEEPS</b><span>Hearts \u2022 Upgrades \u2022 Skills</span><span>Boss trophies \u2022 Highscore</span></div></div><div class="prestigeRun" id="prestigePreviewRun"></div><div class="prestigeActions"><button id="cancelPrestige" class="cancelMerge">Cancel</button><button id="confirmPrestige" class="prestige">Prestige</button></div>';
+  els.area.appendChild(panel);
+  els.prestigeConfirm=panel;
+  els.prestigePreviewGain=document.getElementById('prestigePreviewGain');
+  els.prestigePreviewPower=document.getElementById('prestigePreviewPower');
+  els.prestigePreviewRun=document.getElementById('prestigePreviewRun');
+  els.cancelPrestige=document.getElementById('cancelPrestige');
+  els.confirmPrestige=document.getElementById('confirmPrestige');
+
+  const tooltip=document.createElement('div');
+  tooltip.className='prestigeTooltip';
+  tooltip.setAttribute('role','tooltip');
+  tooltip.innerHTML='<b>PRESTIGE</b><span>Restart the run for permanent PP power</span>';
+  document.body.appendChild(tooltip);
+  els.prestigeTooltip=tooltip;
+
+  const oldButton=els.doPrestige,newButton=oldButton.cloneNode(true);
+  oldButton.replaceWith(newButton);
+  els.doPrestige=newButton;
+  newButton.setAttribute('aria-describedby','prestigeTooltip');
+  tooltip.id='prestigeTooltip';
+
+  function updatePreview(){
+    let gain=pg(),before=1+(Number(s.totalPrestigePoints)||0)*.08,after=1+((Number(s.totalPrestigePoints)||0)+gain)*.08;
+    els.prestigePreviewGain.textContent='+'+gain+' PP';
+    els.prestigePreviewPower.textContent='Income x'+before.toFixed(2)+' \u2192 x'+after.toFixed(2);
+    els.prestigePreviewRun.textContent='Current run: LVL '+s.turtleCycle+' \u2022 '+fmt(s.total)+' gold earned';
+    els.confirmPrestige.disabled=gain<1;
+    els.confirmPrestige.textContent=gain<1?'Not ready':'Prestige +'+gain+' PP';
+  }
+
+  function hideTooltip(){tooltip.classList.remove('show')}
+  function showTooltip(){
+    if(panel.classList.contains('show'))return;
+    tooltip.classList.add('show');
+    let r=newButton.getBoundingClientRect(),w=tooltip.offsetWidth,h=tooltip.offsetHeight;
+    tooltip.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.left+r.width/2-w/2))+'px';
+    tooltip.style.top=Math.max(8,r.top-h-8)+'px';
+  }
+  function closePrestigeConfirm(){
+    panel.classList.remove('show');
+    if(els.modalShade)els.modalShade.classList.remove('show');
+    hideTooltip();
+  }
+  function openPrestigeConfirm(){
+    if(s.mode==='boss'||s.mode==='tower')return;
+    closePanels();
+    updatePreview();
+    panel.classList.add('show');
+    els.modalShade.classList.add('show');
+    hideTooltip();
+    setTimeout(()=>els.cancelPrestige.focus(),0);
+  }
+  function performPrestige(){
+    let gain=pg();
+    if(gain<1||s.mode==='boss'||s.mode==='tower')return;
+    closePrestigeConfirm();
+    s.prestigePoints+=gain;
+    s.totalPrestigePoints=(s.totalPrestigePoints||0)+gain;
+    s.prestige=1+s.totalPrestigePoints*.08;
+    s.money=0;s.total=0;s.balls=1+s.perm.startBall;s.power=1;s.speed=1;s.luck=0;
+    s.turtleGrow=0;s.turtleCycle=1;s.mode='turtle';balls=[];turtle.death=0;turtle.hp=0;
+    setTurtle();turtle.hp=turtle.max;syncBalls();toast('PRESTIGE!<br>+'+gain+' PP');ui();saveGame();
+  }
+
+  bind(newButton,openPrestigeConfirm);
+  bind(els.cancelPrestige,closePrestigeConfirm);
+  bind(els.confirmPrestige,performPrestige);
+  newButton.addEventListener('pointerenter',showTooltip);
+  newButton.addEventListener('pointerleave',hideTooltip);
+  newButton.addEventListener('focus',showTooltip);
+  newButton.addEventListener('blur',hideTooltip);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&panel.classList.contains('show'))closePrestigeConfirm()});
+
+  const closePanelsBeforePrestige=closePanels;
+  closePanels=function(){
+    panel.classList.remove('show');
+    tooltip.classList.remove('show');
+    closePanelsBeforePrestige();
+  };
+
+  const prestigePreviewUi=ui;
+  ui=function(){
+    prestigePreviewUi();
+    let battleBlocked=s.mode==='boss'||s.mode==='tower',ready=pg()>=1;
+    els.doPrestige.disabled=battleBlocked;
+    els.doPrestige.classList.toggle('prestigeReady',ready&&!battleBlocked);
+    els.doPrestige.classList.toggle('prestigeWaiting',!ready&&!battleBlocked);
+    els.doPrestige.setAttribute('aria-label',ready?'Prestige for '+pg()+' PP. Opens confirmation.':'Prestige information. Earn more run gold to unlock.');
+    if(panel.classList.contains('show'))updatePreview();
+  };
+  ui();
+}
+
+setupHeroBallSkills();
 setupFeedbackUI();
 setupInGameSettings();
 setupTowerProgress();
+setupPrestigePreview();
 setupStartMenu();
 })();
