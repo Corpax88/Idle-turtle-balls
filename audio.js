@@ -1,7 +1,8 @@
 (function(root){
   'use strict';
 
-  let context=null,noiseBuffer=null;
+  const MUSIC_URL='Music/Evig%20Spillsirkel.wav';
+  let context=null,noiseBuffer=null,music=null,musicEnabled=true,musicRequested=false;
   const lastPlayed=Object.create(null);
   const cooldowns={hit:45,heavyHit:80,crit:115,bossHit:65,buy:70,overcharge:220,launch:120,merge:260,bossStart:500,bossDeath:900,playerHit:240,defeat:700,level:180};
 
@@ -13,6 +14,37 @@
     return context;
   }
 
+  function getMusic(){
+    if(music)return music;
+    try{
+      music=new root.Audio(MUSIC_URL);
+      music.loop=true;
+      music.preload='none';
+      music.volume=.16;
+      music.playsInline=true;
+      return music;
+    }catch(e){return null}
+  }
+
+  function startMusic(){
+    musicRequested=true;
+    if(!musicEnabled||root.document.hidden)return false;
+    const track=getMusic();
+    if(!track)return false;
+    const result=track.play();
+    if(result&&result.catch)result.catch(()=>{});
+    return true;
+  }
+
+  function setEnabled(enabled){
+    musicEnabled=!!enabled;
+    if(!musicEnabled){
+      if(music)music.pause();
+      return false;
+    }
+    return startMusic();
+  }
+
   function unlock(){
     try{
       const ctx=getContext();
@@ -22,6 +54,7 @@
       source.buffer=ctx.createBuffer(1,1,ctx.sampleRate);
       source.connect(ctx.destination);
       source.start();
+      if(musicEnabled)startMusic();
       return true;
     }catch(e){return false}
   }
@@ -125,5 +158,10 @@
     }catch(e){return false}
   }
 
-  root.IdleTurtleAudio={unlock,play};
+  root.document.addEventListener('visibilitychange',()=>{
+    if(root.document.hidden){if(music)music.pause()}
+    else if(musicEnabled&&musicRequested)startMusic();
+  });
+
+  root.IdleTurtleAudio={unlock,play,setEnabled,startMusic};
 })(window);

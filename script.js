@@ -819,6 +819,7 @@ spawnJuice=function(x,y,kind,scale,color){
 function saveStartMenuSettings(){
   try{localStorage.setItem(startMenuSettingsKey,JSON.stringify(startMenuSettings))}catch(e){}
   document.body.classList.toggle('reducedFx',!!startMenuSettings.reducedFx);
+  if(window.IdleTurtleAudio&&window.IdleTurtleAudio.setEnabled)window.IdleTurtleAudio.setEnabled(startMenuSettings.sound);
 }
 
 function playStartMenuChime(){
@@ -859,7 +860,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.65.0 BUTTON GUIDES</div>'+
+    '<div class="startVersion">v0.65.1 SOUNDTRACK LOOP</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1473,11 +1474,11 @@ const BUTTON_HELP={
   devResetSave:['DELETE SAVE','Erase all local progress and start from the beginning.'],
   startPlay:['ENTER THE TOWER','Continue the saved run and return to the game.'],
   startScores:['HIGHSCORE','View the best local tower runs saved on this device.'],
-  startSound:['SOUND','Turn game audio on or off.'],
+  startSound:['SOUND','Turn background music and game sounds on or off.'],
   startFullscreen:['FULLSCREEN','Enter or leave fullscreen mode.'],
   startSettings:['SETTINGS','Open sound, hero side and effects options.'],
-  startSoundOption:['SOUND','Turn game audio on or off.'],
-  gameSoundOption:['SOUND','Turn game audio on or off.'],
+  startSoundOption:['SOUND','Turn background music and game sounds on or off.'],
+  gameSoundOption:['SOUND','Turn background music and game sounds on or off.'],
   startSideOption:['HERO SIDE','Choose whether the hero stands on the left or right in boss fights.'],
   gameSideOption:['HERO SIDE','Choose whether the hero stands on the left or right in boss fights.'],
   startFxOption:['EFFECTS','Switch between full and reduced particles and screen shake.'],

@@ -64,9 +64,13 @@ assert(script.includes('player.maxHp=3+(s.perm.bossHp||0)*3'),'hero must start b
 assert(script.includes("function setupTowerProgress()"),'tower progress UI must be installed');
 assert(script.includes("classList.add('firstBuyCue')"),'first purchase cue must be available');
 assert(style.includes('.towerProgress'),'tower progress must be styled');
-assert(audio.includes("root.IdleTurtleAudio={unlock,play}"),'event sound module must expose its API');
-assert(index.includes('audio.js?v=0.65.0'),'audio module must load before gameplay');
-assert(index.includes('v0.65.0 Button Guides'),'release version must be visible');
+assert(audio.includes("root.IdleTurtleAudio={unlock,play,setEnabled,startMusic}"),'event sound and music module must expose its API');
+assert(audio.includes("const MUSIC_URL='Music/Evig%20Spillsirkel.wav'"),'soundtrack must use the supplied loop');
+assert(audio.includes('music.loop=true'),'soundtrack must loop continuously');
+assert(audio.includes('if(music)music.pause()'),'sound setting must pause the soundtrack');
+assert(fs.existsSync(path.join(root,'Music','Evig Spillsirkel.wav')),'soundtrack file must exist');
+assert(index.includes('audio.js?v=0.65.1'),'audio module must load before gameplay');
+assert(index.includes('v0.65.1 Soundtrack Loop'),'release version must be visible');
 
 for(const path of ['red','laser','bomb','blade','dark']){
   assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
@@ -100,6 +104,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.65.0')<index.indexOf('script.js?v=0.65.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.65.1')<index.indexOf('script.js?v=0.65.1'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, first-run UI, audio, hero skills and button guides.');
+console.log('Regression checks passed: economy, crit, HP, first-run UI, soundtrack, hero skills and button guides.');
