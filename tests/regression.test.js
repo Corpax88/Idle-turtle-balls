@@ -65,8 +65,8 @@ assert(script.includes("function setupTowerProgress()"),'tower progress UI must 
 assert(script.includes("classList.add('firstBuyCue')"),'first purchase cue must be available');
 assert(style.includes('.towerProgress'),'tower progress must be styled');
 assert(audio.includes("root.IdleTurtleAudio={unlock,play}"),'event sound module must expose its API');
-assert(index.includes('audio.js?v=0.64.2'),'audio module must load before gameplay');
-assert(index.includes('v0.64.2 Prestige Preview'),'release version must be visible');
+assert(index.includes('audio.js?v=0.65.0'),'audio module must load before gameplay');
+assert(index.includes('v0.65.0 Button Guides'),'release version must be visible');
 
 for(const path of ['red','laser','bomb','blade','dark']){
   assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
@@ -87,9 +87,19 @@ assert(script.includes("panel.setAttribute('aria-modal','true')"),'prestige conf
 assert(script.includes("s.money=0;s.total=0;s.balls=1+s.perm.startBall"),'confirmed prestige must reset the run');
 assert(style.includes('.prestigeTooltip'),'prestige hover information must be styled');
 assert(style.includes('.prestigeConfirm'),'prestige confirmation must be styled');
+assert(script.includes('function setupButtonHelp()'),'global button help must be installed');
+assert(script.includes("button.id==='doPrestige'||button.classList.contains('weaponTier')"),'specialized Prestige and skill help must remain separate');
+assert(script.includes("document.addEventListener('pointerover'"),'button help must support hover');
+assert(script.includes("document.addEventListener('pointerdown'"),'button help must support touch');
+assert(script.includes("document.addEventListener('focusin'"),'button help must support keyboard focus');
+assert(style.includes('.buttonHelpTooltip'),'global button help must be styled');
+const buttonHelpBlock=script.slice(script.indexOf('const BUTTON_HELP={'),script.indexOf('function setupButtonHelp()'));
+for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openShop','buyPurple','openStats','openScores','openDev','openSettings','summonBoss','psIncome','psStartBall','psRare','psPrestige','psBossHp','psBossDmg','psBossBalls','psBossSpeed','psBossLuck','cancelMerge','confirmMerge','cancelPrestige','confirmPrestige','saveScore','clearScores','devSpawn','devResetSave','startPlay','startScores','startSound','startFullscreen','startSettings','gameSoundOption','gameSideOption','gameFxOption','gameFullscreenOption']){
+  assert(buttonHelpBlock.includes(id+':['),'button help must describe '+id);
+}
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.64.2')<index.indexOf('script.js?v=0.64.2'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.65.0')<index.indexOf('script.js?v=0.65.0'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, first-run UI, audio and hero skills.');
+console.log('Regression checks passed: economy, crit, HP, first-run UI, audio, hero skills and button guides.');

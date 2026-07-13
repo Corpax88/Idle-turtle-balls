@@ -859,7 +859,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.64.2 PRESTIGE PREVIEW</div>'+
+    '<div class="startVersion">v0.65.0 BUTTON GUIDES</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1430,10 +1430,176 @@ function setupPrestigePreview(){
   ui();
 }
 
+const BUTTON_HELP={
+  buyBall:['BALL','Adds one automatic ball. More balls create more hits and income.'],
+  buyPower:['DAMAGE','Raises damage from automatic balls and the Hero Ball in idle mode.'],
+  buySpeed:['SPEED','Moves automatic balls faster, creating more hits each second.'],
+  buyLuck:['CRIT','Levels 1-100 raise crit chance. Later levels raise crit damage.'],
+  mergeBalls:['MERGE','Combines every automatic ball into one ball with the same total power.'],
+  openShop:['UPGRADES','Spend PP and Hearts on permanent upgrades and Hero Ball Skills.'],
+  buyPurple:['PURPLE HEART','Buy one Heart with gold. Hearts fund battle upgrades and skill respecs.'],
+  openStats:['BUILD STATS','View balls, damage, crit values, active skill and estimated income.'],
+  openScores:['HIGHSCORE','View and save the best local tower runs on this device.'],
+  openDev:['DEVELOPER MENU','Open testing tools. Changes here affect the current save.'],
+  openSettings:['SETTINGS','Change sound, effects, hero side and fullscreen.'],
+  summonBoss:['BOSS CHAMBER','Enter the boss fight. Dodge attacks while your hero fires automatically.'],
+  psIncome:['GOLD INCOME','Permanently adds 25% gold income per level. Costs PP.'],
+  psStartBall:['STARTING BALLS','Begin every new Prestige run with one extra ball per level. Costs PP.'],
+  psRare:['BALL RARITY','Permanently raises the chance of shiny and legendary idle balls. Costs PP.'],
+  psPrestige:['PP BOOST','Earn 18% more PP from future Prestiges per level. Costs PP.'],
+  psBossHp:['HERO HP','Adds 3 maximum HP in every boss fight. Costs Hearts.'],
+  psBossDmg:['BOSS SLAYER','Adds 20% damage to hero shots against bosses. Costs Hearts.'],
+  psBossBalls:['MULTISHOT','Adds one hero shot per volley, up to six shots. Costs Hearts.'],
+  psBossSpeed:['FIRE RATE','Makes hero shots travel and reload faster in boss fights. Costs Hearts.'],
+  psBossLuck:['SHOT RARITY','Raises shiny and legendary shot chance during boss fights. Costs Hearts.'],
+  cancelMerge:['CANCEL MERGE','Keep every ball unchanged and return to the game.'],
+  confirmMerge:['CONFIRM MERGE','Combine all automatic balls into one. This cannot be undone.'],
+  cancelPrestige:['CANCEL PRESTIGE','Keep the current run and close this confirmation.'],
+  confirmPrestige:['CONFIRM PRESTIGE','Reset this run and collect its permanent PP reward.'],
+  closeShop:['CLOSE UPGRADES','Close the upgrade panel and return to the game.'],
+  closeDev:['CLOSE DEVELOPER MENU','Close testing tools and return to the game.'],
+  closeScores:['CLOSE HIGHSCORES','Close the local leaderboard and return to the game.'],
+  saveScore:['SAVE HIGHSCORE','Record this run in the local leaderboard on this device.'],
+  clearScores:['CLEAR HIGHSCORES','Delete every saved local highscore from this device.'],
+  devSpawn:['SPAWN BOSS','Start the current boss fight immediately.'],
+  devExit:['EXIT BOSS','Leave the boss fight and return to idle mode.'],
+  devGold:['ADD GOLD','Add 100K gold to the current save for testing.'],
+  devPurple:['ADD HEARTS','Add 10 Purple Hearts to the current save.'],
+  devPP:['ADD PP','Add 10 permanent PP to the current save.'],
+  devX100:['NEXT BOSS','Advance directly to the next boss checkpoint.'],
+  devLegend:['LEGENDARY BALL','Add one legendary automatic ball to the current run.'],
+  devHitboxes:['HITBOXES','Show or hide collision boundaries for testing.'],
+  devHeroSide:['HERO SIDE','Swap the hero and boss sides in boss fights.'],
+  devResetSave:['DELETE SAVE','Erase all local progress and start from the beginning.'],
+  startPlay:['ENTER THE TOWER','Continue the saved run and return to the game.'],
+  startScores:['HIGHSCORE','View the best local tower runs saved on this device.'],
+  startSound:['SOUND','Turn game audio on or off.'],
+  startFullscreen:['FULLSCREEN','Enter or leave fullscreen mode.'],
+  startSettings:['SETTINGS','Open sound, hero side and effects options.'],
+  startSoundOption:['SOUND','Turn game audio on or off.'],
+  gameSoundOption:['SOUND','Turn game audio on or off.'],
+  startSideOption:['HERO SIDE','Choose whether the hero stands on the left or right in boss fights.'],
+  gameSideOption:['HERO SIDE','Choose whether the hero stands on the left or right in boss fights.'],
+  startFxOption:['EFFECTS','Switch between full and reduced particles and screen shake.'],
+  gameFxOption:['EFFECTS','Switch between full and reduced particles and screen shake.'],
+  gameFullscreenOption:['FULLSCREEN','Enter or leave fullscreen mode.']
+};
+
+function setupButtonHelp(){
+  if(document.getElementById('buttonHelpTooltip'))return;
+  const tooltip=document.createElement('div');
+  tooltip.id='buttonHelpTooltip';
+  tooltip.className='buttonHelpTooltip';
+  tooltip.setAttribute('role','tooltip');
+  tooltip.hidden=true;
+  tooltip.innerHTML='<b></b><span></span>';
+  document.body.appendChild(tooltip);
+  let activeButton=null,touchUntil=0,hideTimer=0;
+
+  function helpFor(button){
+    if(!button||button.id==='doPrestige'||button.classList.contains('weaponTier'))return null;
+    if(button.dataset.respec)return ['RESPEC HERO SKILLS','Clear your Hero Ball Skill path so you can choose another. Costs '+weaponRespecCost()+' Hearts.'];
+    if(button.matches('[data-start-close]'))return ['CLOSE','Close this panel and return to the start menu.'];
+    if(BUTTON_HELP[button.id]){
+      if(button.id==='summonBoss')return ['FIGHT '+currentBoss().name.toUpperCase(),BUTTON_HELP[button.id][1]];
+      if(button.id==='confirmPrestige')return ['CONFIRM PRESTIGE','Reset this run and collect '+pg()+' permanent PP.'];
+      return BUTTON_HELP[button.id];
+    }
+    if(button.classList.contains('close'))return ['CLOSE','Close this panel and return to the game.'];
+    return null;
+  }
+
+  function toneFor(button){
+    if(button.classList.contains('danger')||button.classList.contains('startPlay'))return 'red';
+    if(button.classList.contains('bossbtn'))return 'purple';
+    if(button.classList.contains('prestige'))return 'cyan';
+    if(button.classList.contains('shopbtn'))return 'teal';
+    return 'gold';
+  }
+
+  function position(button){
+    const r=button.getBoundingClientRect(),w=tooltip.offsetWidth,h=tooltip.offsetHeight,gap=8;
+    let left=r.left+r.width/2-w/2,top=r.top-h-gap;
+    if(top<8)top=r.bottom+gap;
+    left=Math.max(8,Math.min(window.innerWidth-w-8,left));
+    top=Math.max(8,Math.min(window.innerHeight-h-8,top));
+    tooltip.style.left=Math.round(left)+'px';
+    tooltip.style.top=Math.round(top)+'px';
+  }
+
+  function show(button,isTouch){
+    const help=helpFor(button);
+    if(!help)return;
+    clearTimeout(hideTimer);
+    activeButton=button;
+    tooltip.querySelector('b').textContent=help[0];
+    tooltip.querySelector('span').textContent=help[1];
+    tooltip.dataset.tone=toneFor(button);
+    tooltip.hidden=false;
+    tooltip.classList.add('show');
+    position(button);
+    if(isTouch){
+      touchUntil=Date.now()+1800;
+      hideTimer=setTimeout(()=>hide(true),1800);
+    }
+  }
+
+  function hide(force){
+    if(!force&&Date.now()<touchUntil)return;
+    clearTimeout(hideTimer);
+    activeButton=null;
+    tooltip.classList.remove('show');
+    tooltip.hidden=true;
+  }
+
+  function buttonFrom(event){
+    return event.target instanceof Element?event.target.closest('button'):null;
+  }
+
+  function movedWithin(button,target){
+    return target instanceof Node&&button.contains(target);
+  }
+
+  function describeButton(button){
+    if(!helpFor(button))return;
+    const described=(button.getAttribute('aria-describedby')||'').split(/\s+/).filter(Boolean);
+    if(!described.includes(tooltip.id))described.push(tooltip.id);
+    button.setAttribute('aria-describedby',described.join(' '));
+    if(button.hasAttribute('title'))button.removeAttribute('title');
+  }
+
+  document.querySelectorAll('button').forEach(describeButton);
+  new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+    if(!(node instanceof Element))return;
+    if(node.matches('button'))describeButton(node);
+    node.querySelectorAll&&node.querySelectorAll('button').forEach(describeButton);
+  }))).observe(document.body,{childList:true,subtree:true});
+
+  document.addEventListener('pointerover',event=>{
+    const button=buttonFrom(event);
+    if(!button||event.pointerType==='touch'||movedWithin(button,event.relatedTarget))return;
+    show(button,false);
+  });
+  document.addEventListener('pointerout',event=>{
+    const button=buttonFrom(event);
+    if(!button||movedWithin(button,event.relatedTarget))return;
+    hide(false);
+  });
+  document.addEventListener('pointerdown',event=>{
+    const button=buttonFrom(event);
+    if(button&&event.pointerType!=='mouse')show(button,true);
+  },{passive:true});
+  document.addEventListener('focusin',event=>{const button=buttonFrom(event);if(button)show(button,false)});
+  document.addEventListener('focusout',event=>{if(buttonFrom(event))hide(true)});
+  window.addEventListener('resize',()=>activeButton&&(activeButton.isConnected?position(activeButton):hide(true)));
+  window.addEventListener('scroll',()=>hide(true),{passive:true});
+}
+
 setupHeroBallSkills();
 setupFeedbackUI();
 setupInGameSettings();
 setupTowerProgress();
 setupPrestigePreview();
 setupStartMenu();
+setupButtonHelp();
 })();
