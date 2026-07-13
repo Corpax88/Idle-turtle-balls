@@ -821,7 +821,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.62.0 UPGRADE HUB</div>'+
+    '<div class="startVersion">v0.63.0 FIRST RUN &amp; BALANCE</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -837,7 +837,7 @@ function setupStartMenu(){
     sideOption.querySelector('em').textContent=heroOnRight()?'RIGHT':'LEFT';
     fxOption.querySelector('em').textContent=startMenuSettings.reducedFx?'REDUCED':'FULL';
   }
-  function toggleSound(){startMenuSettings.sound=!startMenuSettings.sound;saveStartMenuSettings();updateStartOptions();if(startMenuSettings.sound)playStartMenuChime()}
+  function toggleSound(){startMenuSettings.sound=!startMenuSettings.sound;saveStartMenuSettings();updateStartOptions();if(startMenuSettings.sound){if(window.IdleTurtleAudio)window.IdleTurtleAudio.unlock();playStartMenuChime()}}
   function showStartScores(){
     let list=scores(),target=screen.querySelector('#startMenuScores');
     target.innerHTML=list.length?list.slice(0,5).map((row,index)=>'<div class="startMenuScore"><i>#'+(index+1)+'</i><b>'+esc(row.name)+'</b><span>LVL '+(row.level||1)+'</span></div>').join(''):'<div class="startMenuEmpty">NO SCORES YET</div>';
@@ -861,6 +861,7 @@ function setupStartMenu(){
   });
   screen.querySelector('#startPlay').addEventListener('click',()=>{
     playStartMenuChime();
+    if(window.IdleTurtleAudio)window.IdleTurtleAudio.unlock();
     closeStartPanels();
     screen.setAttribute('aria-hidden','true');
     game.inert=false;
@@ -911,7 +912,10 @@ function setupInGameSettings(){
     startMenuSettings.sound=!startMenuSettings.sound;
     saveStartMenuSettings();
     renderGameSettings();
-    if(startMenuSettings.sound)playStartMenuChime();
+    if(startMenuSettings.sound){
+      if(window.IdleTurtleAudio)window.IdleTurtleAudio.unlock();
+      playStartMenuChime();
+    }
   });
   panel.querySelector('#gameSideOption').addEventListener('click',()=>{
     s.heroSide=heroOnRight()?'left':'right';
@@ -942,7 +946,169 @@ function closePanels(){
   gameSettingsOpen=false;
 }
 
+let towerProgressSig='';
+
+function setupTowerProgress(){
+  if(document.getElementById('towerProgress'))return;
+  const top=document.querySelector('.top'),smallRow=top&&top.querySelector('.row.small');
+  if(!top)return;
+  const progress=document.createElement('div');
+  progress.id='towerProgress';
+  progress.className='towerProgress';
+  progress.innerHTML='<div class="towerBossMark"><i>\u265c</i><b id="towerBossName"></b></div><div id="towerTrack" class="towerTrack">'+Array.from({length:10},(_,index)=>'<span'+(index===9?' class="bossStep"':'')+'></span>').join('')+'</div><div class="towerSummit"><b id="towerTarget"></b><i>\u25b2 100</i></div>';
+  top.insertBefore(progress,smallRow||null);
+  els.towerProgress=progress;
+  els.towerBossName=progress.querySelector('#towerBossName');
+  els.towerTrack=progress.querySelector('#towerTrack');
+  els.towerTarget=progress.querySelector('#towerTarget');
+}
+
+function updateFirstRunCues(){
+  const upgradeButtons=[els.buyBall,els.buyPower,els.buySpeed,els.buyLuck];
+  upgradeButtons.forEach(button=>{if(button)button.classList.remove('firstBuyCue')});
+  if(els.openShop)els.openShop.classList.remove('firstShopCue');
+  if(s.hasLaunchedHero&&!s.firstUpgradeBought&&s.mode==='turtle'){
+    const options=[[els.buyBall,cb()],[els.buyPower,cp()],[els.buySpeed,cs()],[els.buyLuck,cl()]]
+      .filter(option=>option[0]&&s.money>=option[1])
+      .sort((a,b)=>a[1]-b[1]);
+    if(options[0])options[0][0].classList.add('firstBuyCue');
+  }
+  if(pp()>0&&!s.seenUpgrades&&els.openShop)els.openShop.classList.add('firstShopCue');
+}
+
+function updateTowerProgress(){
+  if(!els.towerProgress)return;
+  const level=Math.max(1,Math.min(TURTLE_RESET,Number(s.turtleCycle)||1));
+  const target=Math.min(TURTLE_RESET,Math.max(BOSS_EVERY,Math.ceil(level/BOSS_EVERY)*BOSS_EVERY));
+  const bossIndex=Math.min(BOSS_ROSTER.length-1,Math.max(0,target/BOSS_EVERY-1));
+  const atBoss=isBossLevel()&&(s.mode==='summon'||s.mode==='boss');
+  const completed=atBoss?10:Math.max(0,(level-1)%BOSS_EVERY);
+  const signature=[level,target,bossIndex,completed,s.mode,s.hasLaunchedHero,s.firstUpgradeBought,s.seenUpgrades,pp()>0,s.money>=Math.min(cb(),cp(),cs(),cl())].join('|');
+  if(signature===towerProgressSig)return;
+  towerProgressSig=signature;
+  els.towerBossName.textContent=BOSS_ROSTER[bossIndex].name;
+  els.towerTarget.textContent='LVL '+target;
+  els.towerProgress.dataset.mode=s.mode;
+  els.towerProgress.classList.toggle('bossNear',target-level<=2||atBoss);
+  Array.from(els.towerTrack.children).forEach((step,index)=>{
+    step.classList.toggle('filled',index<completed);
+    step.classList.toggle('current',completed<10&&index===completed);
+    step.classList.toggle('ready',atBoss&&index===9);
+  });
+  els.towerProgress.setAttribute('aria-label','Level '+level+'. '+BOSS_ROSTER[bossIndex].name+' at level '+target+'. Tower summit level 100.');
+  updateFirstRunCues();
+}
+
+function playSfx(name,strength){
+  if(startMenuOpen||!startMenuSettings.sound||document.hidden)return false;
+  const audio=window.IdleTurtleAudio;
+  return !!(audio&&audio.play&&audio.play(name,strength));
+}
+
+if(s.firstUpgradeBought==null)s.firstUpgradeBought=(s.balls||1)>1||(s.power||1)>1||(s.speed||1)>1||(s.luck||0)>0||(s.total||0)>250;
+if(s.seenUpgrades==null)s.seenUpgrades=(s.totalPrestigePoints||0)>0||Object.values(s.perm||{}).some(value=>value>0);
+
+const firstRunFreshSave=freshSave;
+freshSave=function(){
+  return Object.assign(firstRunFreshSave(),{firstUpgradeBought:false,seenUpgrades:false});
+};
+
+const firstRunBuy=buy;
+buy=function(cost,fn,btn,keyName){
+  const before=keyName?meterLevel(keyName):0,result=firstRunBuy(cost,fn,btn,keyName);
+  if(result){
+    s.firstUpgradeBought=true;
+    towerProgressSig='';
+    playSfx(keyName&&meterLevel(keyName)<before?'overcharge':'buy');
+  }
+  return result;
+};
+
+const firstRunOpenPanel=openPanel;
+openPanel=function(which){
+  if(which==='shop'){
+    s.seenUpgrades=true;
+    towerProgressSig='';
+    saveGame();
+  }
+  return firstRunOpenPanel(which);
+};
+
+const soundFireHero=fireHero;
+fireHero=function(){
+  const before=hero.state;
+  soundFireHero();
+  if(before==='drag'&&hero.state==='flying')playSfx('launch');
+};
+
+const soundHit=hit;
+hit=function(ball){
+  soundHit(ball);
+  if(!turtle.hitCrit)playSfx(ball&&ball.rar!=='normal'?'heavyHit':'hit',ball&&ball.rar==='legendary'?1.25:1);
+};
+
+const soundHeroHit=heroHit;
+heroHit=function(){
+  soundHeroHit();
+  playSfx('heavyHit',1.25);
+};
+
+const soundCritPopup=critPopup;
+critPopup=function(x,y,value,scale){
+  soundCritPopup(x,y,value,scale);
+  playSfx('crit',scale||1);
+};
+
+const soundMerge=startMergeAnim;
+startMergeAnim=function(total,ball){
+  soundMerge(total,ball);
+  playSfx('merge',1.1);
+};
+
+const soundStartBoss=startBoss;
+startBoss=function(){
+  soundStartBoss();
+  playSfx('bossStart',1.15);
+};
+
+const soundBossDeath=startBossDeath;
+startBossDeath=function(){
+  const fresh=(boss.defeat||0)<=0;
+  soundBossDeath();
+  if(fresh)playSfx('bossDeath',1.2);
+};
+
+const soundLoseBoss=loseBoss;
+loseBoss=function(message){
+  soundLoseBoss(message);
+  playSfx('defeat');
+};
+
+const soundGrowTurtle=growTurtle;
+growTurtle=function(){
+  soundGrowTurtle();
+  towerProgressSig='';
+  playSfx('level');
+};
+
+const progressUi=ui;
+ui=function(){
+  progressUi();
+  updateTowerProgress();
+};
+
+const feedbackUpdate=update;
+update=function(dt){
+  const previousPlayerHp=player.hp,previousBossHp=boss.hp,previousMode=s.mode;
+  feedbackUpdate(dt);
+  if(previousMode==='boss'&&s.mode==='boss'){
+    if(player.hp<previousPlayerHp)playSfx('playerHit',1.1);
+    if(boss.hp<previousBossHp&&(boss.defeat||0)<=0)playSfx('bossHit',Math.min(1.35,1+(previousBossHp-boss.hp)/Math.max(1,boss.max)*3));
+  }
+};
+
 setupFeedbackUI();
 setupInGameSettings();
+setupTowerProgress();
 setupStartMenu();
 })();

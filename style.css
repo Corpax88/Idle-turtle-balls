@@ -249,3 +249,29 @@ body.reducedFx .startHero,body.reducedFx .startWarden,body.reducedFx .startPlay{
   #openStats .shopLabel,#openScores .shopLabel,#openDev .shopLabel{font-size:8px}
   #openStats .shopPrice,#openScores .shopPrice,#openDev .shopPrice{min-height:9px}
 }
+
+/* First-run route: one compact floor rail, ending at the next boss door. */
+.towerProgress{width:min(100%,980px);height:24px;margin:5px auto 0;display:grid;grid-template-columns:minmax(92px,1.2fr) minmax(130px,4fr) auto;align-items:center;gap:8px;color:#cbd5e1;transition:filter .2s ease}
+.towerBossMark,.towerSummit{min-width:0;height:22px;display:flex;align-items:center;gap:6px;font-size:8px;font-weight:1000;letter-spacing:.5px;text-transform:uppercase}
+.towerBossMark i{width:20px;height:20px;display:grid;place-items:center;border:1px solid #72542a;border-radius:4px;background:#090b0e;color:#d9a441;font-style:normal;font-size:13px;box-shadow:inset 0 1px 0 rgba(255,232,163,.12)}
+.towerBossMark b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fef3c7;font-size:8px}
+.towerTrack{position:relative;height:12px;display:grid;grid-template-columns:repeat(10,minmax(4px,1fr));align-items:center;gap:4px;padding:0 2px}
+.towerTrack:before{content:'';position:absolute;left:3px;right:3px;top:5px;height:2px;background:#2e3440;box-shadow:0 1px 0 #000}
+.towerTrack span{position:relative;z-index:1;height:7px;border:1px solid #4b5563;border-radius:2px;background:#10151c;box-shadow:0 1px 0 #000;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}
+.towerTrack span.filled{border-color:#d9a441;background:#b87333;box-shadow:0 0 6px rgba(217,164,65,.45)}
+.towerTrack span.current{height:11px;border-color:#fde68a;background:#ef4444;box-shadow:0 0 9px rgba(239,68,68,.65)}
+.towerTrack span.bossStep{height:12px;border-color:#9333ea;background:#2e1065}
+.towerTrack span.bossStep:after{content:'\2666';position:absolute;inset:-4px 0 0;display:grid;place-items:center;color:#e9d5ff;font-size:8px}
+.towerTrack span.bossStep.ready{border-color:#f5d0fe;background:#9333ea;box-shadow:0 0 12px rgba(192,132,252,.75)}
+.towerSummit{justify-content:flex-end;white-space:nowrap}.towerSummit b{color:#fff7ed}.towerSummit i{font-style:normal;color:#d9a441;font-size:7px}
+.towerProgress.bossNear{filter:brightness(1.18)}
+.towerProgress[data-mode="boss"] .towerBossMark i,.towerProgress[data-mode="summon"] .towerBossMark i{border-color:#ef4444;color:#fecaca;box-shadow:0 0 9px rgba(239,68,68,.5)}
+
+button.firstBuyCue,button.firstShopCue{z-index:1;animation:firstRunCue 1.05s ease-in-out infinite;outline:2px solid rgba(253,230,138,.8);outline-offset:-3px}
+body.reducedFx button.firstBuyCue,body.reducedFx button.firstShopCue{animation:none;filter:brightness(1.16)}
+@keyframes firstRunCue{0%,100%{filter:brightness(1);box-shadow:inset 0 1px 0 rgba(255,232,163,.18),inset 0 -4px 0 rgba(0,0,0,.42),0 3px 0 #060403,0 0 0 rgba(250,204,21,0)}50%{filter:brightness(1.25);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -4px 0 rgba(0,0,0,.35),0 3px 0 #060403,0 0 18px rgba(250,204,21,.72)}}
+
+@media (max-width:480px){
+  .towerProgress{height:20px;margin-top:3px;grid-template-columns:minmax(70px,1fr) minmax(104px,2.7fr) auto;gap:5px}
+  .towerBossMark,.towerSummit{height:18px;gap:4px;font-size:7px}.towerBossMark i{width:17px;height:17px;font-size:11px}.towerBossMark b{font-size:6.7px}.towerTrack{gap:2px}.towerSummit i{display:none}
+}
