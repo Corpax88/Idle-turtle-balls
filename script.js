@@ -682,6 +682,15 @@ function moneyBurst(x,y){
 
 const BOSS_FIGHT_CHARACTER_SCALE=.80,BOSS_FIGHT_PROJECTILE_SCALE=.72;
 const BOSS_NATIVE_FACING=[1,-1,-1,1,1,1,1,1,1,-1];
+const BOSS_FRAME_SEQUENCES=Array.from({length:10},()=>({
+  idle:[0,1,2,3],attack:[4,5,6,7],hit:[8,9,10,11],death:[12,13,14,15]
+}));
+BOSS_FRAME_SEQUENCES[5]={
+  idle:[0,1,2,3],attack:[4,5,4,5],hit:[8,9,8,9],death:[12,13,14,15]
+};
+const BOSS_FRAME_CLIPS={
+  5:{5:{right:72},13:{right:88},14:{right:72}}
+};
 
 function bossSpriteFacing(index){
   let nativeFacing=BOSS_NATIVE_FACING[index]||1,desiredFacing=heroOnRight()?1:-1;
@@ -705,21 +714,24 @@ function drawBossAsset(index,bd,hpPct,panic,rage,hit,defeat,tm,size){
   size=(size||1)*BOSS_FIGHT_CHARACTER_SCALE;
   let img=bossAnimatedImages[index];
   if(!imgReady(img))return drawBossStaticAsset(index,bd,hpPct,panic,rage,hit,defeat,tm,size);
-  let state=0,local=0;
-  if(defeat>0){state=12;local=Math.min(3,Math.floor((1-defeat/132)*4))}
-  else if(hit){state=8;local=Math.min(3,Math.floor((1-Math.min(30,boss.hurt)/30)*4))}
-  else if((boss.attackAnim||0)>0){state=4;local=Math.min(3,Math.floor((1-boss.attackAnim/30)*4))}
+  let state='idle',local=0;
+  if(defeat>0){state='death';local=Math.min(3,Math.floor((1-defeat/132)*4))}
+  else if(hit){state='hit';local=Math.min(3,Math.floor((1-Math.min(30,boss.hurt)/30)*4))}
+  else if((boss.attackAnim||0)>0){state='attack';local=Math.min(3,Math.floor((1-boss.attackAnim/30)*4))}
   else local=Math.floor(performance.now()/1000*2.4+index)%4;
-  let frame=state+local,drawSize=184*size,facing=bossSpriteFacing(index);
+  let frame=BOSS_FRAME_SEQUENCES[index][state][local],drawSize=184*size,facing=bossSpriteFacing(index),
+    clip=(BOSS_FRAME_CLIPS[index]&&BOSS_FRAME_CLIPS[index][frame])||{},left=clip.left||0,top=clip.top||0,
+    right=clip.right||0,bottom=clip.bottom||0,sw=378-left-right,sh=378-top-bottom,unit=drawSize/378,
+    sx=frame*384+3+left,sy=3+top,dx=-drawSize*.5+left*unit,dy=-drawSize*.62+top*unit,dw=sw*unit,dh=sh*unit;
   ctx.save();
   ctx.imageSmoothingEnabled=true;
   ctx.imageSmoothingQuality='high';
   ctx.scale(facing,1);
-  ctx.drawImage(img,frame*384+3,3,378,378,-drawSize*.5,-drawSize*.62,drawSize,drawSize);
+  ctx.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh);
   if(hit){
     ctx.globalCompositeOperation='screen';
     ctx.globalAlpha=.12;
-    ctx.drawImage(img,frame*384+3,3,378,378,-drawSize*.5,-drawSize*.62,drawSize,drawSize);
+    ctx.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh);
   }
   ctx.restore();
   drawBossHealthBar(hpPct,size);

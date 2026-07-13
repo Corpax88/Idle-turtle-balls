@@ -61,6 +61,10 @@ assert.equal(Math.floor(Math.sqrt(12000/12000)),1,'first prestige point should u
 const finalSetBoss=script.slice(script.lastIndexOf('function setBoss(){'),script.indexOf('\nfunction drawBossAsset',script.lastIndexOf('function setBoss(){')));
 assert(!finalSetBoss.includes('purple'),'Purple Hearts must not increase boss HP');
 assert(script.includes('player.maxHp=3+(s.perm.bossHp||0)*3'),'hero must start boss fights with 3 HP');
+assert(script.includes("BOSS_FRAME_SEQUENCES[5]={"),'Rust Reaper must use curated animation frames');
+assert(script.includes("attack:[4,5,4,5],hit:[8,9,8,9]"),'corrupt Rust Reaper edge frames must stay out of combat animation');
+assert(script.includes("5:{5:{right:72},13:{right:88},14:{right:72}}"),'detached Rust Reaper edge fragments must be clipped');
+assert(script.includes('ctx.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh)'),'boss sprite clips must preserve frame scale and anchoring');
 assert(script.includes("function setupTowerProgress()"),'tower progress UI must be installed');
 assert(script.includes("classList.add('firstBuyCue')"),'first purchase cue must be available');
 assert(style.includes('.towerProgress'),'tower progress must be styled');
