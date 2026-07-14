@@ -69,12 +69,33 @@ assert(script.includes("function setupTowerProgress()"),'tower progress UI must 
 assert(script.includes("classList.add('firstBuyCue')"),'first purchase cue must be available');
 assert(style.includes('.towerProgress'),'tower progress must be styled');
 assert(audio.includes("root.IdleTurtleAudio={unlock,play,setEnabled,startMusic}"),'event sound and music module must expose its API');
-assert(audio.includes("const MUSIC_URL='Music/Evig%20Spillsirkel.wav'"),'soundtrack must use the supplied loop');
+assert(audio.includes("const MUSIC_URL='Music/Evig%20Spillsirkel.wav?v=0.66.0'"),'soundtrack must use the cache-busted seamless loop');
 assert(audio.includes('music.loop=true'),'soundtrack must loop continuously');
+assert(audio.includes('source.loop=true'),'Web Audio soundtrack must loop sample-accurately');
+assert(audio.includes('source.loopStart=0'),'sample-accurate loop must start at the first frame');
+assert(audio.includes('source.loopEnd=musicBuffer.duration'),'sample-accurate loop must end at the final frame');
+assert(audio.includes('stopBufferMusic(true)'),'soundtrack position must survive settings and visibility pauses');
 assert(audio.includes('if(music)music.pause()'),'sound setting must pause the soundtrack');
-assert(fs.existsSync(path.join(root,'Music','Evig Spillsirkel.wav')),'soundtrack file must exist');
-assert(index.includes('audio.js?v=0.65.1'),'audio module must load before gameplay');
-assert(index.includes('v0.65.1 Soundtrack Loop'),'release version must be visible');
+const musicPath=path.join(root,'Music','Evig Spillsirkel.wav');
+assert(fs.existsSync(musicPath),'soundtrack file must exist');
+const wav=fs.readFileSync(musicPath);
+assert.equal(wav.toString('ascii',0,4),'RIFF','soundtrack must remain a WAV file');
+let wavPos=12,wavFormat=null,wavData=null;
+while(wavPos+8<=wav.length){
+  const id=wav.toString('ascii',wavPos,wavPos+4),size=wav.readUInt32LE(wavPos+4),start=wavPos+8;
+  if(id==='fmt ')wavFormat={channels:wav.readUInt16LE(start+2),blockAlign:wav.readUInt16LE(start+12),bits:wav.readUInt16LE(start+14)};
+  if(id==='data')wavData={start,size};
+  wavPos=start+size+(size&1);
+}
+assert(wavFormat&&wavData&&wavFormat.bits===16,'seam test requires the PCM16 soundtrack');
+let loopBoundaryJump=0;
+for(let channel=0;channel<wavFormat.channels;channel++){
+  const first=wav.readInt16LE(wavData.start+channel*2),last=wav.readInt16LE(wavData.start+wavData.size-wavFormat.blockAlign+channel*2);
+  loopBoundaryJump=Math.max(loopBoundaryJump,Math.abs(last-first));
+}
+assert(loopBoundaryJump<64,'soundtrack sample boundary must be seamless');
+assert(index.includes('audio.js?v=0.66.0'),'audio module must load before gameplay');
+assert(index.includes('v0.66.0 Seamless Soundtrack'),'release version must be visible');
 
 for(const path of ['red','laser','bomb','blade','dark']){
   assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
@@ -108,6 +129,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.65.1')<index.indexOf('script.js?v=0.65.1'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.66.0')<index.indexOf('script.js?v=0.66.0'),'audio must load before gameplay');
 
 console.log('Regression checks passed: economy, crit, HP, first-run UI, soundtrack, hero skills and button guides.');

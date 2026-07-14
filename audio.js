@@ -1,8 +1,9 @@
 (function(root){
   'use strict';
 
-  const MUSIC_URL='Music/Evig%20Spillsirkel.wav';
-  let context=null,noiseBuffer=null,music=null,musicEnabled=true,musicRequested=false;
+  const MUSIC_URL='Music/Evig%20Spillsirkel.wav?v=0.66.0';
+  let context=null,noiseBuffer=null,music=null,musicBuffer=null,musicSource=null,musicGain=null,musicLoad=null,
+    musicOffset=0,musicStartedAt=0,musicEnabled=true,musicRequested=false;
   const lastPlayed=Object.create(null);
   const cooldowns={hit:45,heavyHit:80,crit:115,bossHit:65,buy:70,overcharge:220,launch:120,merge:260,bossStart:500,bossDeath:900,playerHit:240,defeat:700,level:180};
 
@@ -26,9 +27,60 @@
     }catch(e){return null}
   }
 
-  function startMusic(){
-    musicRequested=true;
-    if(!musicEnabled||root.document.hidden)return false;
+  function loadMusic(ctx){
+    if(musicBuffer)return Promise.resolve(musicBuffer);
+    if(musicLoad)return musicLoad;
+    musicLoad=root.fetch(MUSIC_URL)
+      .then(response=>{
+        if(!response.ok)throw new Error('Music request failed');
+        return response.arrayBuffer();
+      })
+      .then(arrayBuffer=>new Promise((resolve,reject)=>{
+        let settled=false;
+        const done=buffer=>{if(!settled){settled=true;resolve(buffer)}};
+        const fail=error=>{if(!settled){settled=true;reject(error)}};
+        try{
+          const result=ctx.decodeAudioData(arrayBuffer,done,fail);
+          if(result&&result.then)result.then(done,fail);
+        }catch(error){fail(error)}
+      }))
+      .then(buffer=>{musicBuffer=buffer;return buffer})
+      .catch(error=>{musicLoad=null;throw error});
+    return musicLoad;
+  }
+
+  function stopBufferMusic(rememberPosition){
+    if(!musicSource)return;
+    if(rememberPosition&&context&&musicBuffer&&musicBuffer.duration){
+      musicOffset=(musicOffset+Math.max(0,context.currentTime-musicStartedAt))%musicBuffer.duration;
+    }
+    const source=musicSource;
+    musicSource=null;
+    source.onended=null;
+    try{source.stop()}catch(e){}
+  }
+
+  function playBufferMusic(ctx){
+    if(musicSource||!musicBuffer)return !!musicSource;
+    if(!musicGain){
+      musicGain=ctx.createGain();
+      musicGain.gain.value=.16;
+      musicGain.connect(ctx.destination);
+    }
+    const source=ctx.createBufferSource();
+    source.buffer=musicBuffer;
+    source.loop=true;
+    source.loopStart=0;
+    source.loopEnd=musicBuffer.duration;
+    source.connect(musicGain);
+    musicStartedAt=ctx.currentTime;
+    source.onended=()=>{if(musicSource===source)musicSource=null};
+    musicSource=source;
+    source.start(0,musicOffset%musicBuffer.duration);
+    return true;
+  }
+
+  function startFallbackMusic(){
     const track=getMusic();
     if(!track)return false;
     const result=track.play();
@@ -36,9 +88,22 @@
     return true;
   }
 
+  function startMusic(){
+    musicRequested=true;
+    if(!musicEnabled||root.document.hidden)return false;
+    const ctx=getContext();
+    if(!ctx)return startFallbackMusic();
+    if(ctx.state==='suspended')ctx.resume();
+    loadMusic(ctx).then(()=>{
+      if(musicEnabled&&!root.document.hidden)playBufferMusic(ctx);
+    }).catch(()=>startFallbackMusic());
+    return true;
+  }
+
   function setEnabled(enabled){
     musicEnabled=!!enabled;
     if(!musicEnabled){
+      stopBufferMusic(true);
       if(music)music.pause();
       return false;
     }
@@ -159,7 +224,7 @@
   }
 
   root.document.addEventListener('visibilitychange',()=>{
-    if(root.document.hidden){if(music)music.pause()}
+    if(root.document.hidden){stopBufferMusic(true);if(music)music.pause()}
     else if(musicEnabled&&musicRequested)startMusic();
   });
 
