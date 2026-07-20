@@ -18,6 +18,13 @@ const critChance=luck=>Math.min(.33,.03+Math.min(100,luck)*.003);
 const bossCritChance=luck=>Math.min(.20,.02+Math.min(100,luck)*.0018);
 const critDamage=luck=>4+Math.max(0,luck-100)*.08;
 const bossCritDamage=luck=>Math.min(5,2.5+Math.max(0,luck-100)*.025);
+const heartCost=(purchases,parts=0)=>Math.floor(12000*Math.pow(1.42,Math.max(0,purchases))*(1+Math.max(0,parts)*.25));
+const idleRarityOdds=level=>{
+  const bonus=Math.max(0,level)*.006,legendary=Math.min(1,.004+bonus),totalSpecial=Math.min(1,.035+bonus*3);
+  return {legendary,shiny:Math.max(0,totalSpecial-legendary)};
+};
+const shotRarityOdds=level=>({legendary:Math.min(.12,.002+Math.max(0,level)*.001),shiny:Math.min(.40,.023+Math.max(0,level)*.004)});
+const mergeCompression=count=>Math.min(1.75,1.15+Math.max(0,count-2)*.025);
 const heroSkillBonus=(path,tier,hits,missing)=>{
   if(path==='red')return Math.min(.75,.03*tier*Math.min(5,hits+1));
   if(path==='laser')return .025*tier;
@@ -51,6 +58,15 @@ assert.equal(critDamage(100),4);
 assert.equal(critDamage(125),6);
 assert.equal(bossCritDamage(100),2.5);
 assert.equal(bossCritDamage(500),5);
+assert.equal(heartCost(0),12000);
+assert(heartCost(2)>heartCost(1),'Heart price must rise with completed purchases');
+assert.equal(heartCost(2),heartCost(2),'spending Hearts must not affect purchase price');
+assert(closeTo(idleRarityOdds(1).legendary-idleRarityOdds(0).legendary,.006));
+assert(closeTo(idleRarityOdds(1).shiny-idleRarityOdds(0).shiny,.012));
+assert(closeTo(shotRarityOdds(1).legendary-shotRarityOdds(0).legendary,.001));
+assert(closeTo(shotRarityOdds(1).shiny-shotRarityOdds(0).shiny,.004));
+assert(mergeCompression(2)>1,'Merge must add compression damage');
+assert.equal(mergeCompression(40),1.75,'large merges must receive the capped compression bonus');
 assert.equal(heroSkillBonus('red',5,4,0),.75);
 assert.equal(heroSkillBonus('laser',5,0,0),.125);
 assert(closeTo(heroSkillBonus('bomb',5,0,0),.235));
@@ -94,8 +110,19 @@ for(let channel=0;channel<wavFormat.channels;channel++){
   loopBoundaryJump=Math.max(loopBoundaryJump,Math.abs(last-first));
 }
 assert(loopBoundaryJump<64,'soundtrack sample boundary must be seamless');
-assert(index.includes('audio.js?v=0.66.0'),'audio module must load before gameplay');
-assert(index.includes('v0.66.0 Seamless Soundtrack'),'release version must be visible');
+assert(index.includes('audio.js?v=0.67.0'),'audio module must load before gameplay');
+assert(index.includes('v0.67.0 Boss Flow'),'release version must be visible');
+assert(script.includes('s.heartPurchases++'),'Heart purchases must have a permanent price counter');
+assert(script.includes('Math.pow(1.42,s.heartPurchases)'),'Heart price must use purchase history instead of current wallet balance');
+assert(script.includes('s.heartPurchases=Math.max(0,Math.floor(Number(s.purple)||0))'),'old saves must migrate existing Hearts into the permanent price counter');
+assert(style.includes('#area canvas{touch-action:none}'),'boss touch steering must own the canvas gesture without browser interference');
+assert(script.includes('function mergeCompressionMultiplier(count)'),'Merge compression formula must be shared by preview and gameplay');
+assert(script.includes('compressed=damage*mergeCompressionMultiplier(balls.length)'),'Merge preview must show its real damage increase');
+assert(script.includes('merged.merge*=compression'),'Merge damage bonus must be applied to the resulting ball');
+assert(script.includes('const BOSS_PHASE_SHIFT_FRAMES=96')&&script.includes('const BOSS_STUN_FRAMES=80'),'boss phase wind-up and respite durations are missing');
+assert(script.includes('function beginBossPhaseShift(target)')&&script.includes('enemyShots=[]'),'boss transitions must clear active pressure');
+assert(script.includes("bossAttack=function(){")&&script.includes("if((boss.phaseShift||0)>0||(boss.stun||0)>0)return"),'boss attacks must pause during phase changes and stun');
+assert(script.includes("player.targetY=(point.clientY-rect.top)*H/rect.height-(touchLike?48:0)"),'touch steering must keep the hero above the player finger');
 
 for(const path of ['red','laser','bomb','blade','dark']){
   assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
@@ -129,6 +156,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.66.0')<index.indexOf('script.js?v=0.66.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.67.0')<index.indexOf('script.js?v=0.67.0'),'audio must load before gameplay');
 
 console.log('Regression checks passed: economy, crit, HP, first-run UI, soundtrack, hero skills and button guides.');
