@@ -881,7 +881,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.66.0 SEAMLESS SOUNDTRACK</div>'+
+    '<div class="startVersion">v0.68.0 GUIDED PROGRESSION</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1027,6 +1027,7 @@ function updateFirstRunCues(){
   const upgradeButtons=[els.buyBall,els.buyPower,els.buySpeed,els.buyLuck];
   upgradeButtons.forEach(button=>{if(button)button.classList.remove('firstBuyCue')});
   if(els.openShop)els.openShop.classList.remove('firstShopCue');
+  if(s.guidedOnboarding)return;
   if(s.hasLaunchedHero&&!s.firstUpgradeBought&&s.mode==='turtle'){
     const options=[[els.buyBall,cb()],[els.buyPower,cp()],[els.buySpeed,cs()],[els.buyLuck,cl()]]
       .filter(option=>option[0]&&s.money>=option[1])
@@ -1377,6 +1378,7 @@ function setupPrestigePreview(){
   const oldButton=els.doPrestige,newButton=oldButton.cloneNode(true);
   oldButton.replaceWith(newButton);
   els.doPrestige=newButton;
+  els.prestigeGainText=newButton.querySelector('#prestigeGainText');
   newButton.setAttribute('aria-describedby','prestigeTooltip');
   tooltip.id='prestigeTooltip';
 
@@ -1729,6 +1731,7 @@ function setupButtonHelp(){
   }
 
   function show(button,isTouch){
+    if(button.classList.contains('guidedCue'))return;
     const help=helpFor(button);
     if(!help)return;
     clearTimeout(hideTimer);
@@ -1796,6 +1799,137 @@ function setupButtonHelp(){
   window.addEventListener('scroll',()=>hide(true),{passive:true});
 }
 
+const GUIDED_ONBOARDING_VERSION=1;
+const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige'];
+
+function makeGuidedOnboardingState(done){
+  const state={version:GUIDED_ONBOARDING_VERSION};
+  GUIDED_ONBOARDING_STEPS.forEach(step=>{state[step]=!!done});
+  return state;
+}
+
+function hasExistingGuidedProgress(){
+  return (Number(s.total)||0)>0||(Number(s.turtleCycle)||1)>1||(Number(s.machineParts)||0)>0||
+    (Number(s.totalPrestigePoints)||0)>0||(Number(s.balls)||1)>1||(Number(s.power)||1)>1||
+    (Number(s.speed)||1)>1||(Number(s.luck)||0)>0;
+}
+
+if(!s.guidedOnboarding||s.guidedOnboarding.version!==GUIDED_ONBOARDING_VERSION){
+  s.guidedOnboarding=makeGuidedOnboardingState(hasExistingGuidedProgress());
+}
+
+const guidedFreshSave=freshSave;
+freshSave=function(){
+  const fresh=guidedFreshSave();
+  fresh.guidedOnboarding=makeGuidedOnboardingState(false);
+  return fresh;
+};
+
+let guidedTarget=null,guidedPaused=false;
+
+function setGuidedTarget(next){
+  if(guidedTarget&&next&&guidedTarget.step===next.step&&guidedTarget.button===next.button)return;
+  if(guidedTarget&&guidedTarget.button){
+    guidedTarget.button.classList.remove('guidedCue');
+    guidedTarget.button.removeAttribute('aria-current');
+  }
+  guidedTarget=next||null;
+  guidedPaused=!!guidedTarget;
+  document.body.classList.toggle('guidedPause',guidedPaused);
+  if(guidedTarget)document.body.dataset.guideStep=guidedTarget.step;
+  else delete document.body.dataset.guideStep;
+  if(guidedTarget&&guidedTarget.button){
+    guidedTarget.button.classList.add('guidedCue');
+    guidedTarget.button.setAttribute('aria-current','step');
+    if(guidedTarget.button.closest('.panel')){
+      setTimeout(()=>guidedTarget&&guidedTarget.button.scrollIntoView({block:'center',behavior:startMenuSettings.reducedFx?'auto':'smooth'}),0);
+    }
+  }
+}
+
+function completeGuidedStep(step){
+  const guide=s.guidedOnboarding;
+  if(!guide||guide[step])return;
+  guide[step]=true;
+  setGuidedTarget(null);
+  towerProgressSig='';
+  saveGame();
+}
+
+function guidedButtonReady(button){
+  if(!button||!button.isConnected||button.disabled)return false;
+  const rect=button.getBoundingClientRect();
+  return rect.width>0&&rect.height>0;
+}
+
+function nextGuidedStep(){
+  const guide=s.guidedOnboarding;
+  if(!guide||startMenuOpen||s.mode!=='turtle')return null;
+  const candidates=[];
+  if(!guide.ball&&s.money>=cb())candidates.push({step:'ball',button:els.buyBall});
+  if(guide.ball&&!guide.speed&&s.money>=cs())candidates.push({step:'speed',button:els.buySpeed});
+  if(guide.ball&&guide.speed&&!guide.merge&&(s.balls||0)>=4&&!mergeAnim)candidates.push({step:'merge',button:els.mergeBalls});
+  if(!guide.heart&&(s.machineParts||0)>=1&&s.money>=cph())candidates.push({step:'heart',button:els.buyPurple});
+  if(guide.heart&&!guide.upgrades&&(s.machineParts||0)>=1)candidates.push({step:'upgrades',button:els.openShop});
+  if(guide.upgrades&&!guide.heroHp&&els.prestigePanel.classList.contains('show')&&s.purple>=psCost('bossHp')){
+    candidates.push({step:'heroHp',button:els.psBossHp});
+  }
+  if(!guide.prestige&&(s.turtleCycle||1)>=40&&pg()>=1)candidates.push({step:'prestige',button:els.doPrestige});
+  return candidates.find(candidate=>guidedButtonReady(candidate.button))||null;
+}
+
+function updateGuidedOnboarding(){setGuidedTarget(nextGuidedStep())}
+
+const guidedBuy=buy;
+buy=function(cost,fn,button,keyName){
+  const result=guidedBuy(cost,fn,button,keyName);
+  if(result&&keyName==='balls')completeGuidedStep('ball');
+  if(result&&keyName==='speed')completeGuidedStep('speed');
+  return result;
+};
+
+const guidedBuyP=buyP;
+buyP=function(keyName){
+  const result=guidedBuyP(keyName);
+  if(result&&keyName==='bossHp')completeGuidedStep('heroHp');
+  return result;
+};
+
+const guidedUpdate=update;
+update=function(dt){
+  if(guidedPaused)return;
+  guidedUpdate(dt);
+};
+
+const guidedUi=ui;
+ui=function(){
+  guidedUi();
+  updateGuidedOnboarding();
+};
+
+function setupGuidedOnboarding(){
+  let knownHeartPurchases=s.heartPurchases||0;
+  const watch=(button,step,predicate)=>{
+    if(!button)return;
+    const finish=()=>{if((!predicate||predicate())&&!s.guidedOnboarding[step])completeGuidedStep(step)};
+    button.addEventListener('pointerup',finish);
+    button.addEventListener('click',finish);
+  };
+  const finishHeart=()=>{
+    const purchases=s.heartPurchases||0;
+    if(purchases>knownHeartPurchases)completeGuidedStep('heart');
+    knownHeartPurchases=purchases;
+  };
+  if(els.buyPurple){
+    els.buyPurple.addEventListener('pointerup',finishHeart);
+    els.buyPurple.addEventListener('click',finishHeart);
+  }
+  watch(els.mergeBalls,'merge',()=>els.mergePanel.classList.contains('show'));
+  watch(els.openShop,'upgrades',()=>els.prestigePanel.classList.contains('show'));
+  watch(els.doPrestige,'prestige',()=>els.prestigeConfirm&&els.prestigeConfirm.classList.contains('show'));
+  updateGuidedOnboarding();
+}
+
 setupHeroBallSkills();
 setupFeedbackUI();
 setupHeartEconomy();
@@ -1803,5 +1937,6 @@ setupInGameSettings();
 setupTowerProgress();
 setupPrestigePreview();
 setupStartMenu();
+setupGuidedOnboarding();
 setupButtonHelp();
 })();
