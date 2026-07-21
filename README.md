@@ -1,4 +1,4 @@
-# Idle Turtle Balls
+# Idle Turtle Balls v0.68.0
 
 Et lite idle/clicker-spill bygget som en statisk nettside.
 
@@ -16,7 +16,10 @@ Spillet lagrer en glattet versjon av faktisk gold per sekund. Ved retur gis 35 %
 ## First Run & Balance
 
 - HUD-en viser de ti stegene frem til neste boss og malet pa level 100.
-- Forste hero-kast og forste kjop far visuelle signaler uten forklarende dialoger.
+- Nye spillere ledes visuelt gjennom Ball, Speed, Merge, Hearts, Upgrades og Hero HP.
+- Arenaen pauses ved hvert nytt steg, mens riktig knapp pulserer uten forklarende dialoger.
+- Prestige introduseres fra level 40 og viser alltid den faktiske PP-utbetalingen direkte pa knappen.
+- Eksisterende lagringer hopper automatisk over introduksjonen.
 - `audio.js` gir lyd til kast, treff, crit, kjop, merge og boss-oyeblikk.
 - Balansekontrakten bevarer startkostnad 20, forste PP ved 12K total gold og eksisterende HP-/crit-kurver.
 
@@ -29,6 +32,15 @@ Weapon tree styrer bade hero-ballen i idle og hero-skuddene i bosskamper:
 - Blast Core gir eksplosive treff og proximity detonation.
 - Razor Drive bygger ricochet-fart og cutting damage.
 - Void Core styrer mot malet og skalerer med manglende HP.
+
+## Boss Flow
+
+- Bosshelten reagerer raskere og holdes over fingeren under touch-styring.
+- Bossens rage-faser har en tydelig wind-up og et kort stun-vindu uten nye angrep.
+- Heart-prisen styres av antall Hearts som er kjopt, ikke hvor mange spilleren har igjen.
+- Rarity-oppgraderinger viser eksakt endring i shiny- og legendary-sjanse.
+- Merge gir en faktisk kompresjonsbonus som bade forhåndsvises og brukes av den nye ballen.
+- Prestige-knapp, bekreftelse og utbetaling bruker samme PP-beregning.
 
 ## Tester
 

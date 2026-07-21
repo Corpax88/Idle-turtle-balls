@@ -18,6 +18,13 @@ const critChance=luck=>Math.min(.33,.03+Math.min(100,luck)*.003);
 const bossCritChance=luck=>Math.min(.20,.02+Math.min(100,luck)*.0018);
 const critDamage=luck=>4+Math.max(0,luck-100)*.08;
 const bossCritDamage=luck=>Math.min(5,2.5+Math.max(0,luck-100)*.025);
+const heartCost=(purchases,parts=0)=>Math.floor(12000*Math.pow(1.42,Math.max(0,purchases))*(1+Math.max(0,parts)*.25));
+const idleRarityOdds=level=>{
+  const bonus=Math.max(0,level)*.006,legendary=Math.min(1,.004+bonus),totalSpecial=Math.min(1,.035+bonus*3);
+  return {legendary,shiny:Math.max(0,totalSpecial-legendary)};
+};
+const shotRarityOdds=level=>({legendary:Math.min(.12,.002+Math.max(0,level)*.001),shiny:Math.min(.40,.023+Math.max(0,level)*.004)});
+const mergeCompression=count=>Math.min(1.75,1.15+Math.max(0,count-2)*.025);
 const heroSkillBonus=(path,tier,hits,missing)=>{
   if(path==='red')return Math.min(.75,.03*tier*Math.min(5,hits+1));
   if(path==='laser')return .025*tier;
@@ -27,6 +34,28 @@ const heroSkillBonus=(path,tier,hits,missing)=>{
   return 0;
 };
 const closeTo=(actual,expected)=>Math.abs(actual-expected)<1e-9;
+const guidedNext=(guide,state)=>{
+  if(state.menuOpen||state.mode!=='turtle')return null;
+  if(!guide.ball&&state.money>=state.ballCost)return 'ball';
+  if(guide.ball&&!guide.speed&&state.money>=state.speedCost)return 'speed';
+  if(guide.ball&&guide.speed&&!guide.merge&&state.balls>=4)return 'merge';
+  if(!guide.heart&&state.bosses>=1&&state.money>=state.heartCost)return 'heart';
+  if(guide.heart&&!guide.upgrades&&state.bosses>=1)return 'upgrades';
+  if(guide.upgrades&&!guide.heroHp&&state.shopOpen&&state.hearts>=state.heroHpCost)return 'heroHp';
+  if(!guide.prestige&&state.level>=40&&state.prestigeGain>=1)return 'prestige';
+  return null;
+};
+
+const guide={ball:false,speed:false,merge:false,heart:false,upgrades:false,heroHp:false,prestige:false};
+const guideState={menuOpen:false,mode:'turtle',money:20,ballCost:20,speedCost:20,balls:1,bosses:0,heartCost:12000,shopOpen:false,hearts:0,heroHpCost:2,level:1,prestigeGain:0};
+assert.equal(guidedNext(guide,guideState),'ball');
+guide.ball=true;assert.equal(guidedNext(guide,guideState),'speed');
+guide.speed=true;guideState.balls=4;assert.equal(guidedNext(guide,guideState),'merge');
+guide.merge=true;guideState.bosses=1;guideState.money=12000;assert.equal(guidedNext(guide,guideState),'heart');
+guide.heart=true;assert.equal(guidedNext(guide,guideState),'upgrades');
+guide.upgrades=true;guideState.shopOpen=true;guideState.hearts=2;assert.equal(guidedNext(guide,guideState),'heroHp');
+guide.heroHp=true;guideState.shopOpen=false;guideState.level=39;guideState.prestigeGain=4;assert.equal(guidedNext(guide,guideState),null);
+guideState.level=40;assert.equal(guidedNext(guide,guideState),'prestige');
 
 for(const [name,growth] of Object.entries({ball:1.30,damage:1.36,speed:1.33,crit:1.48})){
   assert.equal(upgradeCost(growth,0),20,name+' must start at 20 gold');
@@ -51,6 +80,15 @@ assert.equal(critDamage(100),4);
 assert.equal(critDamage(125),6);
 assert.equal(bossCritDamage(100),2.5);
 assert.equal(bossCritDamage(500),5);
+assert.equal(heartCost(0),12000);
+assert(heartCost(2)>heartCost(1),'Heart price must rise with completed purchases');
+assert.equal(heartCost(2),heartCost(2),'spending Hearts must not affect purchase price');
+assert(closeTo(idleRarityOdds(1).legendary-idleRarityOdds(0).legendary,.006));
+assert(closeTo(idleRarityOdds(1).shiny-idleRarityOdds(0).shiny,.012));
+assert(closeTo(shotRarityOdds(1).legendary-shotRarityOdds(0).legendary,.001));
+assert(closeTo(shotRarityOdds(1).shiny-shotRarityOdds(0).shiny,.004));
+assert(mergeCompression(2)>1,'Merge must add compression damage');
+assert.equal(mergeCompression(40),1.75,'large merges must receive the capped compression bonus');
 assert.equal(heroSkillBonus('red',5,4,0),.75);
 assert.equal(heroSkillBonus('laser',5,0,0),.125);
 assert(closeTo(heroSkillBonus('bomb',5,0,0),.235));
@@ -94,8 +132,19 @@ for(let channel=0;channel<wavFormat.channels;channel++){
   loopBoundaryJump=Math.max(loopBoundaryJump,Math.abs(last-first));
 }
 assert(loopBoundaryJump<64,'soundtrack sample boundary must be seamless');
-assert(index.includes('audio.js?v=0.66.0'),'audio module must load before gameplay');
-assert(index.includes('v0.66.0 Seamless Soundtrack'),'release version must be visible');
+assert(index.includes('audio.js?v=0.68.0'),'audio module must load before gameplay');
+assert(index.includes('v0.68.0 Guided Progression'),'release version must be visible');
+assert(script.includes('s.heartPurchases++'),'Heart purchases must have a permanent price counter');
+assert(script.includes('Math.pow(1.42,s.heartPurchases)'),'Heart price must use purchase history instead of current wallet balance');
+assert(script.includes('s.heartPurchases=Math.max(0,Math.floor(Number(s.purple)||0))'),'old saves must migrate existing Hearts into the permanent price counter');
+assert(style.includes('#area canvas{touch-action:none}'),'boss touch steering must own the canvas gesture without browser interference');
+assert(script.includes('function mergeCompressionMultiplier(count)'),'Merge compression formula must be shared by preview and gameplay');
+assert(script.includes('compressed=damage*mergeCompressionMultiplier(balls.length)'),'Merge preview must show its real damage increase');
+assert(script.includes('merged.merge*=compression'),'Merge damage bonus must be applied to the resulting ball');
+assert(script.includes('const BOSS_PHASE_SHIFT_FRAMES=96')&&script.includes('const BOSS_STUN_FRAMES=80'),'boss phase wind-up and respite durations are missing');
+assert(script.includes('function beginBossPhaseShift(target)')&&script.includes('enemyShots=[]'),'boss transitions must clear active pressure');
+assert(script.includes("bossAttack=function(){")&&script.includes("if((boss.phaseShift||0)>0||(boss.stun||0)>0)return"),'boss attacks must pause during phase changes and stun');
+assert(script.includes("player.targetY=(point.clientY-rect.top)*H/rect.height-(touchLike?48:0)"),'touch steering must keep the hero above the player finger');
 
 for(const path of ['red','laser','bomb','blade','dark']){
   assert(script.includes(path+':{name:'),'hero skill path '+path+' must exist');
@@ -114,6 +163,7 @@ assert(style.includes('.heroSkillDetail'),'skill explanations must be styled');
 assert(script.includes('function setupPrestigePreview()'),'prestige preview must be installed');
 assert(script.includes("panel.setAttribute('aria-modal','true')"),'prestige confirmation must be an accessible modal');
 assert(script.includes("s.money=0;s.total=0;s.balls=1+s.perm.startBall"),'confirmed prestige must reset the run');
+assert(script.includes("els.prestigeGainText=newButton.querySelector('#prestigeGainText')"),'live Prestige payout must target the visible cloned button');
 assert(style.includes('.prestigeTooltip'),'prestige hover information must be styled');
 assert(style.includes('.prestigeConfirm'),'prestige confirmation must be styled');
 assert(script.includes('function setupButtonHelp()'),'global button help must be installed');
@@ -122,6 +172,15 @@ assert(script.includes("document.addEventListener('pointerover'"),'button help m
 assert(script.includes("document.addEventListener('pointerdown'"),'button help must support touch');
 assert(script.includes("document.addEventListener('focusin'"),'button help must support keyboard focus');
 assert(style.includes('.buttonHelpTooltip'),'global button help must be styled');
+assert(script.includes("const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige']"),'guided progression order must remain explicit');
+assert(script.includes("if(!guide.prestige&&(s.turtleCycle||1)>=40&&pg()>=1)"),'Prestige guidance must wait for level 40 and a real payout');
+assert(script.includes("if(!guide.heart&&(s.machineParts||0)>=1&&s.money>=cph())"),'Heart guidance must wait for a boss clear and an affordable purchase');
+assert(script.includes("if(guidedPaused)return"),'guided actions must pause gameplay simulation');
+assert(script.includes("fresh.guidedOnboarding=makeGuidedOnboardingState(false)"),'fresh saves must receive the visual introduction');
+assert(script.includes('function hasExistingGuidedProgress()'),'existing saves must migrate past the introduction');
+assert(script.includes('function setupGuidedOnboarding()'),'guided button interactions must be installed');
+assert(style.includes('body.guidedPause #area canvas'),'guided pauses must visually calm the arena');
+assert(style.includes('button.guidedCue'),'guided actions must have a distinct visual cue');
 const buttonHelpBlock=script.slice(script.indexOf('const BUTTON_HELP={'),script.indexOf('function setupButtonHelp()'));
 for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openShop','buyPurple','openStats','openScores','openDev','openSettings','summonBoss','psIncome','psStartBall','psRare','psPrestige','psBossHp','psBossDmg','psBossBalls','psBossSpeed','psBossLuck','cancelMerge','confirmMerge','cancelPrestige','confirmPrestige','saveScore','clearScores','devSpawn','devResetSave','startPlay','startScores','startSound','startFullscreen','startSettings','gameSoundOption','gameSideOption','gameFxOption','gameFullscreenOption']){
   assert(buttonHelpBlock.includes(id+':['),'button help must describe '+id);
@@ -129,6 +188,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.66.0')<index.indexOf('script.js?v=0.66.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.68.0')<index.indexOf('script.js?v=0.68.0'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, first-run UI, soundtrack, hero skills and button guides.');
+console.log('Regression checks passed: economy, crit, HP, guided progression, soundtrack, hero skills and button guides.');
