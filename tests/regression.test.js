@@ -25,6 +25,7 @@ const idleRarityOdds=level=>{
 };
 const shotRarityOdds=level=>({legendary:Math.min(.12,.002+Math.max(0,level)*.001),shiny:Math.min(.40,.023+Math.max(0,level)*.004)});
 const mergeCompression=count=>Math.min(1.75,1.15+Math.max(0,count-2)*.025);
+const heroMomentumCharge=combo=>Math.min(24,14+Math.min(6,Math.max(0,combo))*2);
 const heroSkillBonus=(path,tier,hits,missing)=>{
   if(path==='red')return Math.min(.75,.03*tier*Math.min(5,hits+1));
   if(path==='laser')return .025*tier;
@@ -94,6 +95,8 @@ assert.equal(heroSkillBonus('laser',5,0,0),.125);
 assert(closeTo(heroSkillBonus('bomb',5,0,0),.235));
 assert.equal(heroSkillBonus('blade',5,0,0),.20);
 assert.equal(heroSkillBonus('dark',5,0,1),.46);
+assert.equal([1,2,3,4,5].reduce((total,combo)=>total+heroMomentumCharge(combo),0),100,'five Hero Ball hits must fill Momentum');
+assert.equal(heroMomentumCharge(20),24,'Momentum charge must be capped');
 assert.equal(Math.floor(Math.sqrt(12000/12000)),1,'first prestige point should unlock at 12K total gold');
 
 const finalSetBoss=script.slice(script.lastIndexOf('function setBoss(){'),script.indexOf('\nfunction drawBossAsset',script.lastIndexOf('function setBoss(){')));
@@ -132,8 +135,8 @@ for(let channel=0;channel<wavFormat.channels;channel++){
   loopBoundaryJump=Math.max(loopBoundaryJump,Math.abs(last-first));
 }
 assert(loopBoundaryJump<64,'soundtrack sample boundary must be seamless');
-assert(index.includes('audio.js?v=0.68.0'),'audio module must load before gameplay');
-assert(index.includes('v0.68.0 Guided Progression'),'release version must be visible');
+assert(index.includes('audio.js?v=0.69.0'),'audio module must load before gameplay');
+assert(index.includes('v0.69.0 Hero Overdrive'),'release version must be visible');
 assert(script.includes('s.heartPurchases++'),'Heart purchases must have a permanent price counter');
 assert(script.includes('Math.pow(1.42,s.heartPurchases)'),'Heart price must use purchase history instead of current wallet balance');
 assert(script.includes('s.heartPurchases=Math.max(0,Math.floor(Number(s.purple)||0))'),'old saves must migrate existing Hearts into the permanent price counter');
@@ -181,6 +184,19 @@ assert(script.includes('function hasExistingGuidedProgress()'),'existing saves m
 assert(script.includes('function setupGuidedOnboarding()'),'guided button interactions must be installed');
 assert(style.includes('body.guidedPause #area canvas'),'guided pauses must visually calm the arena');
 assert(style.includes('button.guidedCue'),'guided actions must have a distinct visual cue');
+assert(script.includes('const HERO_OVERDRIVE_FRAMES=240'),'Hero Overdrive must last four seconds at 60 FPS');
+assert(script.includes('const HERO_OVERDRIVE_SPEED=1.18'),'Overdrive ball speed bonus must remain moderate');
+assert(script.includes('const HERO_OVERDRIVE_INCOME=1.12'),'Overdrive income bonus must remain moderate');
+assert(script.includes('const HERO_OVERDRIVE_DAMAGE=1.25'),'Overdrive Hero Ball damage bonus must remain moderate');
+assert(script.includes('function drawHeroMomentum()'),'Momentum must be visible around the Hero Ball');
+assert(script.includes("ball===hero&&heroOverdriveActive()"),'Overdrive damage must only boost the active Hero Ball');
+assert(script.includes("const PLAYTEST_KEY='idleTurtleBalls_playtest_v01'"),'playtest sessions need an isolated storage key');
+assert(script.includes('sessionStorage.setItem(PLAYTEST_KEY'),'playtest data must stay outside the game save');
+assert(script.includes('function setupPlaytestTool()'),'developer playtest report must be installed');
+assert(script.includes("button.id='devPlaytest'"),'playtest report must be reachable from the developer menu');
+assert(script.includes("overdriveButton.id='devOverdrive'"),'developer tools must expose an immediate Overdrive test');
+assert(script.includes('function playtestReportText()'),'playtest results must be exportable');
+assert(style.includes('.playtestSummary'),'playtest report must have a mobile-ready layout');
 const buttonHelpBlock=script.slice(script.indexOf('const BUTTON_HELP={'),script.indexOf('function setupButtonHelp()'));
 for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openShop','buyPurple','openStats','openScores','openDev','openSettings','summonBoss','psIncome','psStartBall','psRare','psPrestige','psBossHp','psBossDmg','psBossBalls','psBossSpeed','psBossLuck','cancelMerge','confirmMerge','cancelPrestige','confirmPrestige','saveScore','clearScores','devSpawn','devResetSave','startPlay','startScores','startSound','startFullscreen','startSettings','gameSoundOption','gameSideOption','gameFxOption','gameFullscreenOption']){
   assert(buttonHelpBlock.includes(id+':['),'button help must describe '+id);
@@ -188,6 +204,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.68.0')<index.indexOf('script.js?v=0.68.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.69.0')<index.indexOf('script.js?v=0.69.0'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, guided progression, soundtrack, hero skills and button guides.');
+console.log('Regression checks passed: economy, crit, HP, onboarding, Hero Overdrive, playtest reporting, soundtrack and button guides.');
