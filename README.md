@@ -1,4 +1,4 @@
-# Idle Turtle Balls v0.68.0
+# Idle Turtle Balls v0.69.0
 
 Et lite idle/clicker-spill bygget som en statisk nettside.
 
@@ -32,6 +32,14 @@ Weapon tree styrer bade hero-ballen i idle og hero-skuddene i bosskamper:
 - Blast Core gir eksplosive treff og proximity detonation.
 - Razor Drive bygger ricochet-fart og cutting damage.
 - Void Core styrer mot malet og skalerer med manglende HP.
+
+## Hero Momentum
+
+- Aktive treff med Hero Ball fyller en segmentert ring rundt ballen.
+- Fem raske treff utloser fire sekunder Overdrive.
+- Overdrive gir 18 % mer ballfart, 12 % mer gold og 25 % mer Hero Ball-skade.
+- Nye treff kan forlenge Overdrive litt, mens Momentum avtar rolig etter inaktivitet.
+- Dev-menyens Session Report samler launches, treff, Overdrives, kjop, merges, bossresultater og progresjon uten a endre save-filen.
 
 ## Boss Flow
 

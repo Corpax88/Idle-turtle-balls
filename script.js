@@ -881,7 +881,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.68.0 GUIDED PROGRESSION</div>'+
+    '<div class="startVersion">v0.69.0 HERO OVERDRIVE</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1930,6 +1930,342 @@ function setupGuidedOnboarding(){
   updateGuidedOnboarding();
 }
 
+const HERO_MOMENTUM_MAX=100;
+const HERO_OVERDRIVE_FRAMES=240;
+const HERO_OVERDRIVE_SPEED=1.18;
+const HERO_OVERDRIVE_INCOME=1.12;
+const HERO_OVERDRIVE_DAMAGE=1.25;
+const heroMomentum={value:0,combo:0,lastHitFrame:-9999,overdrive:0,frame:0};
+
+function heroOverdriveActive(){return s.mode==='turtle'&&heroMomentum.overdrive>0}
+
+function heroMomentumCharge(combo){
+  return Math.min(24,14+Math.min(6,Math.max(0,combo))*2);
+}
+
+function resetHeroMomentum(){
+  heroMomentum.value=0;
+  heroMomentum.combo=0;
+  heroMomentum.overdrive=0;
+  heroMomentum.lastHitFrame=heroMomentum.frame;
+}
+
+function activateHeroOverdrive(){
+  heroMomentum.value=HERO_MOMENTUM_MAX;
+  heroMomentum.overdrive=HERO_OVERDRIVE_FRAMES;
+  heroMomentum.combo=0;
+  machineGlow=Math.max(machineGlow,95);
+  shake=Math.max(shake,9);
+  const palette=heroSkillPalette();
+  heroFx.push({x:hero.x,y:hero.y,life:34,max:34,kind:'critCore',c:palette.main,s:'#fde68a',spin:0,burst:8,scale:.82,alpha:.48});
+  juiceBursts.push({x:hero.x,y:hero.y,life:34,max:34,kind:'ring',scale:1.05,img:'ring',rot:0,layer:'front'});
+  playSfx('merge',.92);
+  playtestIncrement('overdrives');
+  playtestMark('firstOverdrive');
+}
+
+function addHeroMomentum(){
+  if(heroOverdriveActive()){
+    heroMomentum.overdrive=Math.min(HERO_OVERDRIVE_FRAMES+60,heroMomentum.overdrive+8);
+    return;
+  }
+  heroMomentum.combo++;
+  heroMomentum.lastHitFrame=heroMomentum.frame;
+  heroMomentum.value=Math.min(HERO_MOMENTUM_MAX,heroMomentum.value+heroMomentumCharge(heroMomentum.combo));
+  if(heroMomentum.value>=HERO_MOMENTUM_MAX)activateHeroOverdrive();
+}
+
+function updateHeroMomentum(){
+  heroMomentum.frame++;
+  if(s.mode!=='turtle'){
+    if(heroMomentum.value>0||heroMomentum.overdrive>0)resetHeroMomentum();
+    return;
+  }
+  if(heroMomentum.overdrive>0){
+    heroMomentum.overdrive--;
+    heroMomentum.value=Math.min(HERO_MOMENTUM_MAX,HERO_MOMENTUM_MAX*heroMomentum.overdrive/HERO_OVERDRIVE_FRAMES);
+    playtest.overdriveFrames++;
+    if(heroMomentum.overdrive<=0){
+      heroMomentum.value=0;
+      heroMomentum.combo=0;
+    }
+    return;
+  }
+  const idleFrames=heroMomentum.frame-heroMomentum.lastHitFrame;
+  if(idleFrames>120&&heroMomentum.value>0)heroMomentum.value=Math.max(0,heroMomentum.value-.035);
+  if(idleFrames>240)heroMomentum.combo=0;
+}
+
+function drawHeroMomentum(){
+  if(s.mode!=='turtle'||heroMomentum.value<=0)return;
+  setHeroBase();
+  const active=heroOverdriveActive(),progress=Math.max(0,Math.min(1,heroMomentum.value/HERO_MOMENTUM_MAX));
+  const x=hero.state==='ready'||hero.state==='cooldown'?hero.baseX:hero.x;
+  const y=hero.state==='ready'||hero.state==='cooldown'?hero.baseY:hero.y;
+  const time=performance.now(),segments=12,radius=active?43:39;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(active?time/850:-Math.PI/2);
+  ctx.lineCap='round';
+  for(let i=0;i<segments;i++){
+    const start=i*Math.PI*2/segments+.045,end=(i+1)*Math.PI*2/segments-.045,filled=(i+1)/segments<=progress+.001;
+    ctx.strokeStyle=filled?(active?(i%2?'#fde68a':'#ef4444'):'#ef4444'):'rgba(100,116,139,.22)';
+    ctx.lineWidth=active?5:3.5;
+    ctx.globalAlpha=filled?(active?.92:.78):.46;
+    ctx.beginPath();
+    ctx.arc(0,0,radius,start,end);
+    ctx.stroke();
+  }
+  if(active){
+    ctx.globalCompositeOperation='lighter';
+    ctx.globalAlpha=.28+.12*Math.sin(time/75);
+    ctx.strokeStyle='#fde68a';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(0,0,radius+6,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+const momentumBallMoveSpeed=ballMoveSpeed;
+ballMoveSpeed=function(){return momentumBallMoveSpeed()*(heroOverdriveActive()?HERO_OVERDRIVE_SPEED:1)};
+
+const momentumRunMult=runMult;
+runMult=function(){return momentumRunMult()*(heroOverdriveActive()?HERO_OVERDRIVE_INCOME:1)};
+
+const momentumBallDamage=ballDamage;
+ballDamage=function(ball,base,boost){
+  return momentumBallDamage(ball,base,boost)*(ball===hero&&heroOverdriveActive()?HERO_OVERDRIVE_DAMAGE:1);
+};
+
+const momentumHeroHit=heroHit;
+heroHit=function(){
+  const before=turtle.hp;
+  momentumHeroHit();
+  if(before>turtle.hp){
+    addHeroMomentum();
+    playtestIncrement('heroHits');
+    playtest.heroDamage+=Math.max(0,before-Math.max(0,turtle.hp));
+    playtestMark('firstHeroHit');
+  }
+};
+
+const momentumDrawHero=drawHero;
+drawHero=function(){drawHeroMomentum();momentumDrawHero()};
+
+const PLAYTEST_BUILD='v0.69.0 Hero Overdrive';
+const PLAYTEST_KEY='idleTurtleBalls_playtest_v01';
+
+function makePlaytestSession(){
+  return {
+    version:1,build:PLAYTEST_BUILD,startedAt:Date.now(),startingLevel:s.turtleCycle||1,highestLevel:s.turtleCycle||1,
+    goldEarned:0,offlineGold:0,heroLaunches:0,heroHits:0,heroDamage:0,wallBounces:0,overdrives:0,overdriveFrames:0,
+    merges:0,bossAttempts:0,bossWins:0,bossLosses:0,prestiges:0,prestigePP:0,heartsBought:0,
+    purchases:{balls:0,power:0,speed:0,luck:0},permanentUpgrades:{},modeFrames:{turtle:0,summon:0,boss:0,tower:0},marks:{}
+  };
+}
+
+function loadPlaytestSession(){
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(PLAYTEST_KEY)||'null');
+    if(saved&&saved.version===1){
+      saved.purchases=Object.assign({balls:0,power:0,speed:0,luck:0},saved.purchases||{});
+      saved.permanentUpgrades=saved.permanentUpgrades||{};
+      saved.modeFrames=Object.assign({turtle:0,summon:0,boss:0,tower:0},saved.modeFrames||{});
+      saved.marks=saved.marks||{};
+      return saved;
+    }
+  }catch(e){}
+  return makePlaytestSession();
+}
+
+let playtest=loadPlaytestSession(),playtestSaveFrame=0,playtestPrestigePending=0,playtestKnownHearts=s.heartPurchases||0;
+
+function savePlaytestSession(){
+  try{sessionStorage.setItem(PLAYTEST_KEY,JSON.stringify(playtest))}catch(e){}
+}
+
+function playtestElapsed(){return Math.max(0,Math.floor((Date.now()-playtest.startedAt)/1000))}
+function playtestIncrement(key,amount){playtest[key]=(Number(playtest[key])||0)+(amount==null?1:amount)}
+function playtestMark(key){if(playtest.marks[key]==null)playtest.marks[key]=playtestElapsed()}
+
+function playtestTick(dt){
+  playtest.highestLevel=Math.max(playtest.highestLevel||1,s.turtleCycle||1);
+  const mode=playtest.modeFrames[s.mode]==null?'turtle':s.mode;
+  playtest.modeFrames[mode]+=(Number(dt)||1/60)*60;
+  if(++playtestSaveFrame>=300){playtestSaveFrame=0;savePlaytestSession()}
+}
+
+function playtestDuration(frames){
+  const seconds=Math.max(0,Math.round((Number(frames)||0)/60));
+  const minutes=Math.floor(seconds/60),rest=seconds%60;
+  return minutes+':'+String(rest).padStart(2,'0');
+}
+
+function playtestClock(seconds){
+  if(seconds==null)return 'Not reached';
+  const minutes=Math.floor(seconds/60),rest=seconds%60;
+  return minutes+':'+String(rest).padStart(2,'0');
+}
+
+function playtestHitRate(){
+  return playtest.heroLaunches?(playtest.heroHits/playtest.heroLaunches).toFixed(2)+'x':'0.00x';
+}
+
+function playtestRows(){
+  const purchases=playtest.purchases,permanent=Object.entries(playtest.permanentUpgrades).filter(entry=>entry[1]>0).map(entry=>entry[0]+' '+entry[1]).join(', ')||'None';
+  return [
+    ['SESSION',[['Duration',playtestClock(playtestElapsed())],['Start / peak level',(playtest.startingLevel||1)+' / '+(playtest.highestLevel||1)],['Gold earned',fmt(playtest.goldEarned)],['Offline gold',fmt(playtest.offlineGold)]]],
+    ['HERO BALL',[['Launches',playtest.heroLaunches],['Turtle hits',playtest.heroHits],['Hits per launch',playtestHitRate()],['Wall bounces',playtest.wallBounces],['Overdrives',playtest.overdrives],['Overdrive time',playtestDuration(playtest.overdriveFrames)]]],
+    ['PROGRESSION',[['Ball / Damage buys',purchases.balls+' / '+purchases.power],['Speed / Crit buys',purchases.speed+' / '+purchases.luck],['Merges',playtest.merges],['Hearts bought',playtest.heartsBought],['Permanent upgrades',permanent],['Prestiges / PP',playtest.prestiges+' / '+playtest.prestigePP]]],
+    ['BOSSES',[['Attempts',playtest.bossAttempts],['Wins / losses',playtest.bossWins+' / '+playtest.bossLosses],['First boss',playtestClock(playtest.marks.firstBoss)],['First Overdrive',playtestClock(playtest.marks.firstOverdrive)],['First Prestige',playtestClock(playtest.marks.firstPrestige)]]],
+    ['MODE TIME',[['Idle arena',playtestDuration(playtest.modeFrames.turtle)],['Boss ready',playtestDuration(playtest.modeFrames.summon)],['Boss fights',playtestDuration(playtest.modeFrames.boss)],['Tower scenes',playtestDuration(playtest.modeFrames.tower)]]]
+  ];
+}
+
+function playtestReportText(){
+  const lines=['IDLE TURTLE BALLS PLAYTEST','Build: '+PLAYTEST_BUILD,'Recorded: '+new Date().toISOString(),'Device: '+navigator.userAgent,'Viewport: '+window.innerWidth+'x'+window.innerHeight,''];
+  playtestRows().forEach(section=>{
+    lines.push(section[0]);
+    section[1].forEach(row=>lines.push('- '+row[0]+': '+row[1]));
+    lines.push('');
+  });
+  return lines.join('\n').trim();
+}
+
+function renderPlaytestReport(){
+  if(!els.playtestSummary)return;
+  els.playtestSummary.innerHTML=playtestRows().map(section=>'<section class="playtestSection"><h3>'+esc(section[0])+'</h3>'+section[1].map(row=>'<div class="playtestRow"><span>'+esc(row[0])+'</span><b>'+esc(row[1])+'</b></div>').join('')+'</section>').join('');
+}
+
+async function copyPlaytestReport(){
+  const text=playtestReportText(),button=els.copyPlaytest;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(text);
+    else{
+      const area=document.createElement('textarea');
+      area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();
+    }
+    if(button){button.textContent='Copied';setTimeout(()=>button.textContent='Copy report',900)}
+  }catch(e){if(button)button.textContent='Copy failed'}
+}
+
+function resetPlaytestReport(){
+  if(!confirm('Reset this playtest session report?'))return;
+  playtest=makePlaytestSession();
+  playtestKnownHearts=s.heartPurchases||0;
+  savePlaytestSession();
+  renderPlaytestReport();
+}
+
+function setupPlaytestTool(){
+  if(!els.devPanel||document.getElementById('playtestPanel'))return;
+  const grid=els.devPanel.querySelector('.devGrid'),button=document.createElement('button'),overdriveButton=document.createElement('button');
+  overdriveButton.id='devOverdrive';overdriveButton.className='bossbtn';overdriveButton.textContent='Test Overdrive';
+  button.id='devPlaytest';button.className='shopbtn';button.textContent='Session Report';
+  grid.insertBefore(overdriveButton,els.devResetSave||null);
+  grid.insertBefore(button,els.devResetSave||null);
+  const panel=document.createElement('div');
+  panel.id='playtestPanel';panel.className='panel playtestPanel';
+  panel.innerHTML='<button id="closePlaytest" class="close">Close</button><h2>Playtest Report</h2><div class="small playtestIntro">Current browser session. No save data is changed.</div><div id="playtestSummary" class="playtestSummary"></div><div class="playtestActions"><button id="copyPlaytest" class="shopbtn">Copy report</button><button id="resetPlaytest" class="danger">Reset session</button></div>';
+  els.area.appendChild(panel);
+  els.devOverdrive=overdriveButton;els.devPlaytest=button;els.playtestPanel=panel;els.closePlaytest=document.getElementById('closePlaytest');els.playtestSummary=document.getElementById('playtestSummary');els.copyPlaytest=document.getElementById('copyPlaytest');els.resetPlaytest=document.getElementById('resetPlaytest');
+  const closePanelsBeforePlaytest=closePanels;
+  closePanels=function(){panel.classList.remove('show');closePanelsBeforePlaytest()};
+  bind(overdriveButton,()=>{closePanels();if(s.mode!=='turtle'){s.mode='turtle';setTurtle()}activateHeroOverdrive()});
+  bind(button,()=>{closePanels();panel.classList.add('show');els.modalShade.classList.add('show');renderPlaytestReport()});
+  bind(els.closePlaytest,()=>closePanels());
+  bind(els.copyPlaytest,()=>copyPlaytestReport());
+  bind(els.resetPlaytest,resetPlaytestReport);
+  BUTTON_HELP.devPlaytest=['SESSION REPORT','Open the current playtest metrics without changing the save.'];
+  BUTTON_HELP.devOverdrive=['TEST OVERDRIVE','Fill Hero Momentum immediately for visual and balance testing.'];
+  BUTTON_HELP.copyPlaytest=['COPY REPORT','Copy a readable playtest report for sharing.'];
+  BUTTON_HELP.resetPlaytest=['RESET SESSION','Clear only the playtest report. Game progress is kept.'];
+}
+
+const playtestEarn=earn;
+earn=function(){
+  const before=s.money,result=playtestEarn.apply(this,arguments),gained=Math.max(0,s.money-before);
+  playtest.goldEarned+=gained;
+  return result;
+};
+
+const playtestClaimIdle=claimIdle;
+claimIdle=function(){
+  const reward=playtestClaimIdle.apply(this,arguments);
+  if(reward>0){playtest.offlineGold+=reward;playtest.goldEarned+=reward}
+  return reward;
+};
+
+const playtestBuy=buy;
+buy=function(cost,fn,button,keyName){
+  const result=playtestBuy(cost,fn,button,keyName);
+  if(result&&playtest.purchases[keyName]!=null){playtest.purchases[keyName]++;playtestMark('firstPurchase');savePlaytestSession()}
+  return result;
+};
+
+const playtestBuyP=buyP;
+buyP=function(keyName){
+  const result=playtestBuyP(keyName);
+  if(result){playtest.permanentUpgrades[keyName]=(playtest.permanentUpgrades[keyName]||0)+1;savePlaytestSession()}
+  return result;
+};
+
+const playtestFireHero=fireHero;
+fireHero=function(){
+  const before=hero.state;
+  playtestFireHero();
+  if(before==='drag'&&hero.state==='flying'){playtestIncrement('heroLaunches');playtestMark('firstHeroLaunch');savePlaytestSession()}
+};
+
+const playtestWallBounce=heroSkillWallBounce;
+heroSkillWallBounce=function(){playtestIncrement('wallBounces');return playtestWallBounce.apply(this,arguments)};
+
+const playtestMerge=startMergeAnim;
+startMergeAnim=function(){playtestIncrement('merges');savePlaytestSession();return playtestMerge.apply(this,arguments)};
+
+const playtestStartBoss=startBoss;
+startBoss=function(){resetHeroMomentum();playtestIncrement('bossAttempts');playtestMark('firstBoss');savePlaytestSession();return playtestStartBoss.apply(this,arguments)};
+
+const playtestWinBoss=winBoss;
+winBoss=function(){playtestIncrement('bossWins');savePlaytestSession();return playtestWinBoss.apply(this,arguments)};
+
+const playtestLoseBoss=loseBoss;
+loseBoss=function(){playtestIncrement('bossLosses');savePlaytestSession();return playtestLoseBoss.apply(this,arguments)};
+
+const momentumPlaytestUpdate=update;
+update=function(dt){
+  momentumPlaytestUpdate(dt);
+  if(!guidedPaused)updateHeroMomentum();
+  playtestTick(dt);
+};
+
+function setupPlaytestTracking(){
+  if(els.buyPurple){
+    const trackHeart=()=>{
+      const current=s.heartPurchases||0;
+      if(current>playtestKnownHearts){playtest.heartsBought+=current-playtestKnownHearts;playtestKnownHearts=current;savePlaytestSession()}
+    };
+    els.buyPurple.addEventListener('pointerup',trackHeart);
+    els.buyPurple.addEventListener('click',trackHeart);
+  }
+  document.addEventListener('pointerdown',event=>{
+    if(event.target===els.confirmPrestige)playtestPrestigePending=pg();
+  },true);
+  document.addEventListener('click',event=>{
+    if(event.target===els.confirmPrestige&&playtestPrestigePending<=0)playtestPrestigePending=pg();
+  },true);
+  if(els.confirmPrestige){
+    const trackPrestige=()=>{
+      if(playtestPrestigePending>0){playtestIncrement('prestiges');playtest.prestigePP+=playtestPrestigePending;playtestMark('firstPrestige');playtestPrestigePending=0;savePlaytestSession()}
+    };
+    els.confirmPrestige.addEventListener('pointerup',trackPrestige);
+    els.confirmPrestige.addEventListener('click',trackPrestige);
+  }
+  window.addEventListener('pagehide',savePlaytestSession);
+}
+
 setupHeroBallSkills();
 setupFeedbackUI();
 setupHeartEconomy();
@@ -1938,5 +2274,7 @@ setupTowerProgress();
 setupPrestigePreview();
 setupStartMenu();
 setupGuidedOnboarding();
+setupPlaytestTool();
+setupPlaytestTracking();
 setupButtonHelp();
 })();

@@ -330,3 +330,22 @@ body.reducedFx .buttonHelpTooltip{transition:none}
   .buttonHelpTooltip{width:min(224px,calc(100vw - 14px));padding:7px 9px}
   .buttonHelpTooltip span{font-size:9px}
 }
+
+/* v0.69 playtest report: deliberately confined to the developer surface. */
+.playtestPanel{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.playtestIntro{margin:-8px 0 12px;text-align:center;font-size:9px;color:#94a3b8}
+.playtestSummary{width:min(520px,100%);margin:0 auto;border-top:1px solid rgba(217,164,65,.4)}
+.playtestSection{margin:0;padding:10px 0;border-bottom:1px solid rgba(217,164,65,.32)}
+.playtestSection h3{margin:0 0 4px;color:#fde68a;font-size:9px;letter-spacing:.8px;text-transform:uppercase}
+.playtestRow{min-height:27px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(148,163,184,.10)}
+.playtestRow:first-of-type{border-top:0}
+.playtestRow span{min-width:0;color:#94a3b8;font-size:10px;font-weight:750}
+.playtestRow b{flex:0 0 auto;color:#fff7ed;font-size:11px;text-align:right}
+.playtestActions{width:min(520px,100%);margin:12px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.playtestActions button{min-height:44px}
+#devPlaytest{grid-column:span 2}
+#devResetSave{grid-column:1/-1}
+@media(max-width:480px){
+  .playtestPanel{inset:6px;padding:12px 10px max(12px,env(safe-area-inset-bottom))}
+  .playtestSection{padding:8px 0}.playtestRow{min-height:25px}.playtestRow span{font-size:9px}.playtestRow b{font-size:10px}
+}
