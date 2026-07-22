@@ -881,7 +881,7 @@ function setupStartMenu(){
     '<div class="startControls"><div class="startSave"><span><i>LVL</i> '+Math.max(1,s.turtleCycle||1)+'</span><span class="saveHeart"><i>\u2665</i> '+(s.purple||0)+'</span><span><i>\u2699</i> '+(s.machineParts||0)+'</span></div>'+
     '<button id="startPlay" class="startPlay">'+(hasSave?'CONTINUE':'START')+'<small>'+(hasSave?'RETURN TO THE TOWER':'ENTER THE TOWER')+'</small></button>'+
     '<div class="startTools"><button id="startScores" class="startTool" title="Highscore" aria-label="Highscore">\u265b</button><button id="startSound" class="startTool" title="Sound" aria-label="Toggle sound" aria-pressed="'+(startMenuSettings.sound?'true':'false')+'">\u266b</button><button id="startFullscreen" class="startTool" title="Fullscreen" aria-label="Fullscreen">\u26f6</button><button id="startSettings" class="startTool" title="Settings" aria-label="Settings">\u2699</button></div></div>'+
-    '<div class="startVersion">v0.69.0 HERO OVERDRIVE</div>'+
+    '<div class="startVersion">v0.70.0 PRESTIGE GUIDANCE</div>'+
     '<div id="startScorePanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Highscore</h2><div id="startMenuScores" class="startMenuScores"></div></div>'+
     '<div id="startSettingsPanel" class="startPanel" hidden><button class="startPanelClose" data-start-close aria-label="Close">\u00d7</button><h2>Settings</h2><div class="startOptions"><button id="startSoundOption" class="startOption"><span>\u266b</span><b>Sound</b><em></em></button><button id="startSideOption" class="startOption"><span>\u21c6</span><b>Hero Side</b><em></em></button><button id="startFxOption" class="startOption"><span>\u2726</span><b>Effects</b><em></em></button></div></div>';
   document.body.appendChild(screen);
@@ -1420,6 +1420,14 @@ function setupPrestigePreview(){
     s.prestigePoints=pp()+gain;
     s.totalPrestigePoints=(s.totalPrestigePoints||0)+gain;
     s.prestige=1+s.totalPrestigePoints*.08;
+    let guide=s.guidedOnboarding;
+    if(guide){
+      guide.prestige=true;
+      if(!guide.prestigeIncome){
+        guide.prestigeShop=false;
+        guide.awaitingPrestigeSpend=true;
+      }
+    }
     s.money=0;s.total=0;s.balls=1+s.perm.startBall;s.power=1;s.speed=1;s.luck=0;
     s.turtleGrow=0;s.turtleCycle=1;s.mode='turtle';balls=[];turtle.death=0;turtle.hp=0;
     setTurtle();turtle.hp=turtle.max;syncBalls();toast('PRESTIGE!<br>+'+gain+' PP');ui();saveGame();
@@ -1799,11 +1807,11 @@ function setupButtonHelp(){
   window.addEventListener('scroll',()=>hide(true),{passive:true});
 }
 
-const GUIDED_ONBOARDING_VERSION=1;
-const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige'];
+const GUIDED_ONBOARDING_VERSION=2;
+const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige','prestigeShop','prestigeIncome'];
 
 function makeGuidedOnboardingState(done){
-  const state={version:GUIDED_ONBOARDING_VERSION};
+  const state={version:GUIDED_ONBOARDING_VERSION,awaitingPrestigeSpend:false};
   GUIDED_ONBOARDING_STEPS.forEach(step=>{state[step]=!!done});
   return state;
 }
@@ -1814,8 +1822,20 @@ function hasExistingGuidedProgress(){
     (Number(s.speed)||1)>1||(Number(s.luck)||0)>0;
 }
 
+function migrateGuidedOnboardingState(previous){
+  const state=makeGuidedOnboardingState(false);
+  const legacySteps=['ball','speed','merge','heart','upgrades','heroHp','prestige'];
+  if(previous)legacySteps.forEach(step=>{state[step]=!!previous[step]});
+  else if(hasExistingGuidedProgress())legacySteps.forEach(step=>{state[step]=true});
+  const alreadySpentPrestige=(Number(s.totalPrestigePoints)||0)>0;
+  state.prestigeShop=alreadySpentPrestige||!!(previous&&previous.prestigeShop);
+  state.prestigeIncome=alreadySpentPrestige||!!(previous&&previous.prestigeIncome);
+  state.awaitingPrestigeSpend=!!(previous&&previous.awaitingPrestigeSpend&&!state.prestigeIncome);
+  return state;
+}
+
 if(!s.guidedOnboarding||s.guidedOnboarding.version!==GUIDED_ONBOARDING_VERSION){
-  s.guidedOnboarding=makeGuidedOnboardingState(hasExistingGuidedProgress());
+  s.guidedOnboarding=migrateGuidedOnboardingState(s.guidedOnboarding);
 }
 
 const guidedFreshSave=freshSave;
@@ -1865,6 +1885,11 @@ function guidedButtonReady(button){
 function nextGuidedStep(){
   const guide=s.guidedOnboarding;
   if(!guide||startMenuOpen||s.mode!=='turtle')return null;
+  if(guide.awaitingPrestigeSpend&&!guide.prestigeIncome){
+    const shopOpen=els.prestigePanel.classList.contains('show');
+    const next=shopOpen?{step:'prestigeIncome',button:els.psIncome}:{step:'prestigeShop',button:els.openShop};
+    return guidedButtonReady(next.button)?next:null;
+  }
   const candidates=[];
   if(!guide.ball&&s.money>=cb())candidates.push({step:'ball',button:els.buyBall});
   if(guide.ball&&!guide.speed&&s.money>=cs())candidates.push({step:'speed',button:els.buySpeed});
@@ -1890,8 +1915,15 @@ buy=function(cost,fn,button,keyName){
 
 const guidedBuyP=buyP;
 buyP=function(keyName){
+  const guide=s.guidedOnboarding;
+  if(guide&&guide.awaitingPrestigeSpend&&keyName!=='income')return false;
   const result=guidedBuyP(keyName);
   if(result&&keyName==='bossHp')completeGuidedStep('heroHp');
+  if(result&&keyName==='income'&&guide&&guide.awaitingPrestigeSpend){
+    guide.awaitingPrestigeSpend=false;
+    guide.prestigeShop=true;
+    completeGuidedStep('prestigeIncome');
+  }
   return result;
 };
 
@@ -1926,7 +1958,7 @@ function setupGuidedOnboarding(){
   }
   watch(els.mergeBalls,'merge',()=>els.mergePanel.classList.contains('show'));
   watch(els.openShop,'upgrades',()=>els.prestigePanel.classList.contains('show'));
-  watch(els.doPrestige,'prestige',()=>els.prestigeConfirm&&els.prestigeConfirm.classList.contains('show'));
+  watch(els.openShop,'prestigeShop',()=>s.guidedOnboarding.awaitingPrestigeSpend&&els.prestigePanel.classList.contains('show'));
   updateGuidedOnboarding();
 }
 
@@ -2054,7 +2086,7 @@ heroHit=function(){
 const momentumDrawHero=drawHero;
 drawHero=function(){drawHeroMomentum();momentumDrawHero()};
 
-const PLAYTEST_BUILD='v0.69.0 Hero Overdrive';
+const PLAYTEST_BUILD='v0.70.0 Prestige Guidance';
 const PLAYTEST_KEY='idleTurtleBalls_playtest_v01';
 
 function makePlaytestSession(){

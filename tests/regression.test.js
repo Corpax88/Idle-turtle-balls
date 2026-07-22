@@ -37,6 +37,7 @@ const heroSkillBonus=(path,tier,hits,missing)=>{
 const closeTo=(actual,expected)=>Math.abs(actual-expected)<1e-9;
 const guidedNext=(guide,state)=>{
   if(state.menuOpen||state.mode!=='turtle')return null;
+  if(guide.awaitingPrestigeSpend&&!guide.prestigeIncome)return state.shopOpen?'prestigeIncome':'prestigeShop';
   if(!guide.ball&&state.money>=state.ballCost)return 'ball';
   if(guide.ball&&!guide.speed&&state.money>=state.speedCost)return 'speed';
   if(guide.ball&&guide.speed&&!guide.merge&&state.balls>=4)return 'merge';
@@ -47,7 +48,7 @@ const guidedNext=(guide,state)=>{
   return null;
 };
 
-const guide={ball:false,speed:false,merge:false,heart:false,upgrades:false,heroHp:false,prestige:false};
+const guide={ball:false,speed:false,merge:false,heart:false,upgrades:false,heroHp:false,prestige:false,prestigeShop:false,prestigeIncome:false,awaitingPrestigeSpend:false};
 const guideState={menuOpen:false,mode:'turtle',money:20,ballCost:20,speedCost:20,balls:1,bosses:0,heartCost:12000,shopOpen:false,hearts:0,heroHpCost:2,level:1,prestigeGain:0};
 assert.equal(guidedNext(guide,guideState),'ball');
 guide.ball=true;assert.equal(guidedNext(guide,guideState),'speed');
@@ -57,6 +58,9 @@ guide.heart=true;assert.equal(guidedNext(guide,guideState),'upgrades');
 guide.upgrades=true;guideState.shopOpen=true;guideState.hearts=2;assert.equal(guidedNext(guide,guideState),'heroHp');
 guide.heroHp=true;guideState.shopOpen=false;guideState.level=39;guideState.prestigeGain=4;assert.equal(guidedNext(guide,guideState),null);
 guideState.level=40;assert.equal(guidedNext(guide,guideState),'prestige');
+guide.prestige=true;guide.awaitingPrestigeSpend=true;guideState.level=1;guideState.prestigeGain=0;assert.equal(guidedNext(guide,guideState),'prestigeShop');
+guide.prestigeShop=true;guideState.shopOpen=true;assert.equal(guidedNext(guide,guideState),'prestigeIncome');
+guide.prestigeIncome=true;guide.awaitingPrestigeSpend=false;assert.equal(guidedNext(guide,guideState),null);
 
 for(const [name,growth] of Object.entries({ball:1.30,damage:1.36,speed:1.33,crit:1.48})){
   assert.equal(upgradeCost(growth,0),20,name+' must start at 20 gold');
@@ -135,8 +139,8 @@ for(let channel=0;channel<wavFormat.channels;channel++){
   loopBoundaryJump=Math.max(loopBoundaryJump,Math.abs(last-first));
 }
 assert(loopBoundaryJump<64,'soundtrack sample boundary must be seamless');
-assert(index.includes('audio.js?v=0.69.0'),'audio module must load before gameplay');
-assert(index.includes('v0.69.0 Hero Overdrive'),'release version must be visible');
+assert(index.includes('audio.js?v=0.70.0'),'audio module must load before gameplay');
+assert(index.includes('v0.70.0 Prestige Guidance'),'release version must be visible');
 assert(script.includes('s.heartPurchases++'),'Heart purchases must have a permanent price counter');
 assert(script.includes('Math.pow(1.42,s.heartPurchases)'),'Heart price must use purchase history instead of current wallet balance');
 assert(script.includes('s.heartPurchases=Math.max(0,Math.floor(Number(s.purple)||0))'),'old saves must migrate existing Hearts into the permanent price counter');
@@ -175,8 +179,12 @@ assert(script.includes("document.addEventListener('pointerover'"),'button help m
 assert(script.includes("document.addEventListener('pointerdown'"),'button help must support touch');
 assert(script.includes("document.addEventListener('focusin'"),'button help must support keyboard focus');
 assert(style.includes('.buttonHelpTooltip'),'global button help must be styled');
-assert(script.includes("const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige']"),'guided progression order must remain explicit');
+assert(script.includes("const GUIDED_ONBOARDING_STEPS=['ball','speed','merge','heart','upgrades','heroHp','prestige','prestigeShop','prestigeIncome']"),'guided progression order must remain explicit');
 assert(script.includes("if(!guide.prestige&&(s.turtleCycle||1)>=40&&pg()>=1)"),'Prestige guidance must wait for level 40 and a real payout');
+assert(script.includes("if(guide.awaitingPrestigeSpend&&!guide.prestigeIncome)"),'successful Prestige must begin the PP spending guide');
+assert(script.includes("shopOpen?{step:'prestigeIncome',button:els.psIncome}:{step:'prestigeShop',button:els.openShop}"),'post-Prestige guidance must lead from Upgrades to Gold Income');
+assert(script.includes("if(result&&keyName==='income'&&guide&&guide.awaitingPrestigeSpend)"),'the first guided Income purchase must complete the Prestige lesson');
+assert(script.includes('function migrateGuidedOnboardingState(previous)'),'old onboarding saves must migrate safely');
 assert(script.includes("if(!guide.heart&&(s.machineParts||0)>=1&&s.money>=cph())"),'Heart guidance must wait for a boss clear and an affordable purchase');
 assert(script.includes("if(guidedPaused)return"),'guided actions must pause gameplay simulation');
 assert(script.includes("fresh.guidedOnboarding=makeGuidedOnboardingState(false)"),'fresh saves must receive the visual introduction');
@@ -184,6 +192,8 @@ assert(script.includes('function hasExistingGuidedProgress()'),'existing saves m
 assert(script.includes('function setupGuidedOnboarding()'),'guided button interactions must be installed');
 assert(style.includes('body.guidedPause #area canvas'),'guided pauses must visually calm the arena');
 assert(style.includes('button.guidedCue'),'guided actions must have a distinct visual cue');
+assert(style.includes('.hudChip.pp{border-color:#2f789a'),'PP HUD must use the cyan Prestige identity');
+assert(style.includes('.ppIcon{color:#7dd3fc'),'PP button icons must match Prestige instead of Hearts');
 assert(script.includes('const HERO_OVERDRIVE_FRAMES=240'),'Hero Overdrive must last four seconds at 60 FPS');
 assert(script.includes('const HERO_OVERDRIVE_SPEED=1.18'),'Overdrive ball speed bonus must remain moderate');
 assert(script.includes('const HERO_OVERDRIVE_INCOME=1.12'),'Overdrive income bonus must remain moderate');
@@ -204,6 +214,6 @@ for(const id of ['buyBall','buyPower','buySpeed','buyLuck','mergeBalls','openSho
 
 const ids=[...index.matchAll(/id="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size,ids.length,'HTML element IDs must remain unique');
-assert(index.indexOf('audio.js?v=0.69.0')<index.indexOf('script.js?v=0.69.0'),'audio must load before gameplay');
+assert(index.indexOf('audio.js?v=0.70.0')<index.indexOf('script.js?v=0.70.0'),'audio must load before gameplay');
 
-console.log('Regression checks passed: economy, crit, HP, onboarding, Hero Overdrive, playtest reporting, soundtrack and button guides.');
+console.log('Regression checks passed: economy, crit, HP, Prestige guidance, Hero Overdrive, playtest reporting, soundtrack and button guides.');
