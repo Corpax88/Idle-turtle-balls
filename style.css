@@ -79,8 +79,9 @@ button.panelActive{filter:brightness(1.25);box-shadow:inset 0 2px 0 rgba(255,229
 .hudChip.gold b{color:#fff7ed}
 .hudChip.heart i{background:radial-gradient(circle at 35% 25%,#f5d0fe,#a855f7 55%,#581c87 84%);color:#ffe4ff}
 .hudChip.heart b{color:#e9d5ff}
-.hudChip.pp i{border-radius:9px;background:linear-gradient(135deg,#581c87,#9333ea 52%,#c084fc);font-size:12px;color:#f5d0fe}
-.hudChip.pp b{color:#d8b4fe}
+.hudChip.pp{border-color:#2f789a;background:linear-gradient(180deg,rgba(8,53,75,.96),rgba(3,19,29,.98));box-shadow:inset 0 1px 0 rgba(186,230,253,.2),inset 0 -3px 0 rgba(0,0,0,.34),0 2px 0 #02080c}
+.hudChip.pp i{border-radius:9px;background:linear-gradient(135deg,#0f6c9a,#075985 52%,#38bdf8);font-size:12px;color:#e0f2fe}
+.hudChip.pp b{color:#7dd3fc}
 .hudLevel{min-height:52px;padding:8px 18px;display:grid;place-items:center;background:linear-gradient(180deg,#6a4a23,#231608 74%,#100904);border-color:#d9a441;font-size:24px;font-weight:1000;letter-spacing:.3px;text-shadow:0 3px 0 rgba(0,0,0,.72);box-shadow:inset 0 2px 0 rgba(255,229,162,.32),inset 0 -5px 0 rgba(0,0,0,.35),0 3px 0 #1f140c,0 0 18px rgba(217,164,65,.18)}
 .shop{padding:6px 7px 7px;gap:6px;background:linear-gradient(180deg,#07111f,#03070d);border-top:2px solid #4b371d;box-shadow:0 -4px 12px rgba(0,0,0,.35);grid-template-columns:repeat(4,minmax(0,1fr))}
 .shop>button{min-height:46px;border-radius:7px;padding:5px 5px 6px;background:linear-gradient(180deg,#23272a,#090b0f 62%,#050507);border-color:#6b5430;color:#fff7ed;box-shadow:inset 0 1px 0 rgba(255,232,163,.16),inset 0 -4px 0 rgba(0,0,0,.42),0 3px 0 #060403,0 0 0 1px rgba(0,0,0,.35);font-size:10px;letter-spacing:.2px}
@@ -109,7 +110,7 @@ button,input,textarea,select{font:inherit}
 .shopPrice .small{display:inline!important;margin:0!important;color:#fef3c7!important}
 .costIcon{width:13px;height:13px;display:inline-grid;place-items:center;font-style:normal;font-size:9px;font-weight:1000;line-height:1;text-shadow:none}
 .goldIcon{border-radius:50%;background:radial-gradient(circle at 35% 28%,#fff7bf,#facc15 48%,#b45309 82%);color:#4a2500;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 1px 2px #000}
-.ppIcon{color:#e9d5ff;filter:drop-shadow(0 0 4px #9333ea)}
+.ppIcon{color:#7dd3fc;filter:drop-shadow(0 0 4px rgba(56,189,248,.75))}
 .ballIcon{font-size:24px;color:#f8fafc;text-shadow:inset 0 0 2px #fff;filter:drop-shadow(0 0 4px rgba(226,232,240,.55))}
 .damageIcon{color:#fb923c;font-size:24px;filter:drop-shadow(0 0 5px rgba(249,115,22,.7))}
 .speedIcon{color:#67e8f9;font-size:28px;font-family:Arial Black,system-ui;letter-spacing:-5px;transform:translateX(-2px);filter:drop-shadow(0 0 5px rgba(34,211,238,.65))}
@@ -325,6 +326,8 @@ body.reducedFx button.guidedCue::before{animation:none}
 .buttonHelpTooltip[data-tone="cyan"]{--help-accent:#7dd3fc}
 .buttonHelpTooltip[data-tone="teal"]{--help-accent:#5eead4}
 body.reducedFx .buttonHelpTooltip{transition:none}
+body.guidedPause[data-guide-step="prestigeIncome"] #prestigePanel button:not(.guidedCue){pointer-events:none;opacity:.48;filter:saturate(.5)}
+body.guidedPause[data-guide-step="prestigeIncome"] #prestigePanel button.guidedCue{pointer-events:auto;opacity:1}
 
 @media (max-width:480px){
   .buttonHelpTooltip{width:min(224px,calc(100vw - 14px));padding:7px 9px}

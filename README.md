@@ -1,4 +1,4 @@
-# Idle Turtle Balls v0.69.0
+# Idle Turtle Balls v0.70.0
 
 Et lite idle/clicker-spill bygget som en statisk nettside.
 
@@ -18,7 +18,8 @@ Spillet lagrer en glattet versjon av faktisk gold per sekund. Ved retur gis 35 %
 - HUD-en viser de ti stegene frem til neste boss og malet pa level 100.
 - Nye spillere ledes visuelt gjennom Ball, Speed, Merge, Hearts, Upgrades og Hero HP.
 - Arenaen pauses ved hvert nytt steg, mens riktig knapp pulserer uten forklarende dialoger.
-- Prestige introduseres fra level 40 og viser alltid den faktiske PP-utbetalingen direkte pa knappen.
+- Prestige introduseres fra level 40, viser faktisk PP-utbetaling og leder spilleren videre til sitt forste Gold Income-kjop etter resetten.
+- PP bruker Prestiges cyan-identitet i HUD og knapper, mens Hearts beholder lilla som egen valuta.
 - Eksisterende lagringer hopper automatisk over introduksjonen.
 - `audio.js` gir lyd til kast, treff, crit, kjop, merge og boss-oyeblikk.
 - Balansekontrakten bevarer startkostnad 20, forste PP ved 12K total gold og eksisterende HP-/crit-kurver.
